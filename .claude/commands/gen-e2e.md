@@ -1,6 +1,6 @@
 ---
 description: 規約準拠のPlaywright E2Eテスト（spec）を作る
-argument-hint: [対象の画面ID・画面名（例: SCR02 ステージ画面）]
+argument-hint: [対象の画面ID・画面名（例: SCR02 踊る画面。画面IDは基本設計の画面一覧で決める）]
 model: sonnet
 ---
 
@@ -35,11 +35,11 @@ import { saveEvidence } from '../helpers/evidence';
 
 const SCREEN = 'SCR02';
 
-test.describe('SCR02 ステージ画面', () => {
+test.describe('SCR02 踊る画面', () => {
   test('SCR02-01 観点表の確認内容をそのまま書く', async ({ page }) => {
     await page.goto('/');
-    // タイトルから始め、ステージを選ぶ（前のケースの状態を使わない。テスト方針4-3）
-    // 移動・ブレーキ・ベルはキーボードから出す（例: await page.keyboard.press('ArrowRight')）
+    // トップページから始め、踊る画面へ進む（前のケースの状態を使わない。テスト方針4-3）
+    // 手を引く操作（WASD・矢印キー）と楽器の選択（数字キー）はキーボードから出す（例: await page.keyboard.down('ArrowUp')）
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await saveEvidence(page, SCREEN, 'SCR02-01', 1);   // ← 全ケースで必須
   });
@@ -47,10 +47,10 @@ test.describe('SCR02 ステージ画面', () => {
 ```
 
 - `test()` のタイトルは `ケースID + 半角スペース + 観点表の確認内容` にする。
-- 各ケースは新しいページで `page.goto('/')` から始め、観点表の前提（ステージ・操作の順番・固定の要否）をそのケースの中で作る。共有再生のケースは `page.goto('/#…')` から始める。前のケースの結果を前提にしない。DBもテストデータセットも無い。
+- 各ケースは新しいページで `page.goto('/')` から始め、観点表の前提（楽器・操作の順番・残す分身の人数・固定の要否）をそのケースの中で作る。共有URLを開くケースは `page.goto('/#…')` から始める。前のケースの結果を前提にしない。DBもテストデータセットも無い。
 - 操作は**キーボードから出す**（`page.keyboard`）。音の聞こえ方は判定しない（テスト方針2-1）。
-- Phaser は canvas に描くため、canvas の中身の確かめ方は未決（テスト方針4-1）。時間・乱数の種を固定する方法も未決（同4-3。詳細設計で決める）。決まっていない状態でspecが必要になったら、specの中で独自の差し替えを作らず「何が足りないか」を報告して指示を仰ぐ。
-- 時間で進む表示（残り時間・種明かしの再生）を待つときは、固定の待ち時間（`page.waitForTimeout`）ではなく、`expect(...).toBeVisible()` などの自動待機で状態の変化を待つ。
+- 棒人間と舞台は Canvas 2D で描くため、canvas の中身の確かめ方は未決（テスト方針4-1）。時間を固定する方法と、E2Eでの音の扱いも未決（同4-3・4-8。詳細設計で決める）。決まっていない状態でspecが必要になったら、specの中で独自の差し替えを作らず「何が足りないか」を報告して指示を仰ぐ。
+- 時間で進む表示（ループの周の切り替わり・鑑賞の再生）を待つときは、固定の待ち時間（`page.waitForTimeout`）ではなく、`expect(...).toBeVisible()` などの自動待機で状態の変化を待つ。
 - 証跡は全ケースで最低1枚。1ケース内で複数撮るときは連番を `1, 2, 3…` と増やす。
 - ロケーターは `getByRole` / `getByLabel` を優先する。`#id` は `<label for="id">` があるフォーム部品に限り可（テスト方針4-1）。
 - 対象はPCのChromeだけ。スマートフォン・タブレット向けのspec（`*.mobile.spec.ts` など）は作らない。

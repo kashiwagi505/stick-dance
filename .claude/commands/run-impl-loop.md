@@ -1,6 +1,6 @@
 ---
 description: 用意したテスト（ハーネス）に全件合格するまで実装を反復し、PR作成まで行う（テスト方針9-2）
-argument-hint: [対象の機能名・画面ID（例: 旋律の生成機能 SCR02）]
+argument-hint: [対象の機能名・画面ID（例: 頭の高さから音を決める機能 SCR02）]
 ---
 
 対象: $ARGUMENTS

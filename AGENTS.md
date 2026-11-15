@@ -74,7 +74,7 @@ npm run e2e          # E2Eテスト（結合テスト。アプリを自動で起
 
 PR作成時に GitHub Actions（[.github/workflows/ci.yml](.github/workflows/ci.yml)）が `npm run check` を実行し、違反があればPRのチェックが失敗する。
 
-- TypeScript の型検査（`tsconfig.json`、strict）と ESLint（`eslint.config.js`、typescript-eslint の strict）。対象は `src/`・`e2e/`・設定ファイルで、ハーネスの補助スクリプト（`.github/`・`.claude/`）は対象外
+- TypeScript の型検査（`tsconfig.json`、strict）と ESLint（`eslint.config.js`、typescript-eslint の strict）。対象は `src/`・`e2e/`・設定ファイルで、ハーネスの補助スクリプト（`.github/`・`.claude/`）と試作（`prototype/`）は対象外。`src/` の層の境界と、同じ入力から同じ踊りと音にするための禁止（乱数・時計・ブラウザで結果が変わりうる `Math` の関数）も ESLint で止める（実装方針2章・6章）
 - 誤検知の除外は、対象ファイルとルールの両方を指定して絞る。ルール単位の全体除外はしない。
 
 ## レビューを依頼されたとき
