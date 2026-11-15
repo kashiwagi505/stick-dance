@@ -1,0 +1,259 @@
+/*
+ * 棒人間ダンシング 共通部品のスタイル（実装側の写し）
+ * 正本は ドキュメント/02_基本設計/画面設計/デザインシステム/components/部品.css。ここで値を変えない（tokens.test.ts が確かめる）。
+ * 値は ../tokens/tokens.css のトークンだけを使い、ここに色や寸法を直書きしない。
+ */
+
+/* ---- 全画面の地 ---- */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 1024px;
+  min-height: 640px;
+  background: var(--color-stage);
+  color: var(--color-light);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* hidden 属性の要素は、部品の display 指定より優先して隠す */
+[hidden] { display: none !important; }
+
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* 見た目に出さず読み上げにだけ残す（h1 をタイトルとして見せない画面で使う） */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+kbd {
+  font-family: var(--font-key);
+  font-size: inherit;
+}
+
+/* ---- ボタン（components/ボタン.md） ---- */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--target-min);
+  min-width: var(--target-min);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-tube);
+  font-family: var(--font-body);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: box-shadow calc(var(--beat) / 2) var(--ease-light),
+              border-color calc(var(--beat) / 2) var(--ease-light);
+}
+
+.button:active:not(:disabled) { transform: translateY(1px); }
+
+.button--primary {
+  min-height: 56px;
+  min-width: 200px;
+  padding: 0 var(--space-7);
+  border: 2px solid var(--color-light);
+  background: var(--color-light);
+  color: var(--color-stage);
+  font-size: var(--text-lead);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+}
+
+.button--primary:hover:not(:disabled),
+.button--primary:focus-visible { box-shadow: var(--glow-light); }
+
+.button--secondary {
+  border: 1px solid var(--color-haze);
+  background: transparent;
+  color: var(--color-light);
+  font-size: var(--text-small);
+}
+
+.button--secondary:hover:not(:disabled) { border-color: var(--color-light); }
+
+.button:disabled {
+  border: 2px dashed var(--color-haze);
+  background: transparent;
+  color: var(--color-haze);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ---- 状態の案内（components/状態の案内.md） ---- */
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: calc(var(--text-body) * var(--leading-body));
+  margin: 0;
+  font-size: var(--text-body);
+}
+
+.status:empty { visibility: hidden; }
+
+.status--wait { color: var(--color-haze); }
+
+.status--info { color: var(--color-light); }
+
+.status--wait::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: status-breathe calc(var(--beat) * 2) var(--ease-light) infinite alternate;
+}
+
+.status--error {
+  padding: var(--space-3) var(--space-4);
+  border: 2px dashed var(--color-light);
+  border-radius: var(--radius-panel);
+  background: var(--color-stage-raised);
+  color: var(--color-light);
+}
+
+.status--error::before {
+  content: "！";
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-light);
+  color: var(--color-stage);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-small);
+  line-height: 1;
+}
+
+@keyframes status-breathe {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button { transition: none; }
+  .status--wait::before { animation: none; opacity: 1; }
+}
+
+/* ---- キーの印（readme.md 1.3）。キーの名前を、押すものだと分かる形で出す ---- */
+kbd.key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.9em;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-haze);
+  border-bottom-width: 3px;
+  border-radius: 6px;
+  color: var(--color-light);
+  line-height: 1.5;
+}
+
+/* ---- 窓と重ねる案内（components/窓.md） ---- */
+.dialog {
+  width: 560px;
+  max-width: calc(100vw - var(--space-7));
+  max-height: calc(100vh - var(--space-7));
+  padding: var(--space-6);
+  border: 1px solid var(--color-floor);
+  border-radius: var(--radius-panel);
+  background: var(--color-stage-raised);
+  color: var(--color-light);
+  overflow: auto;
+}
+
+.dialog::backdrop { background: rgb(17 15 31 / 0.7); }
+
+.dialog__title {
+  margin: 0 0 var(--space-5);
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+  line-height: 1.3;
+}
+
+.overlay {
+  position: absolute;
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--color-floor);
+  border-radius: var(--radius-panel);
+  background: var(--color-stage-raised);
+  color: var(--color-light);
+}
+
+.overlay--center {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  min-width: 400px;
+  text-align: center;
+}
+
+.overlay__title {
+  margin: 0;
+  font-size: var(--text-lead);
+  font-weight: var(--weight-bold);
+  line-height: 1.4;
+}
+
+.overlay__note {
+  margin: 0;
+  font-size: var(--text-small);
+  color: var(--color-haze);
+}
+
+.overlay[hidden] { display: none; }
+
+/* ---- 譜面の帯（components/譜面の帯.md） ---- */
+.score {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  width: max-content;
+}
+
+.score__row {
+  display: flex;
+  gap: 4px;
+}
+
+.score__cell {
+  flex: none;
+  width: 20px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--color-floor);
+}
+
+/* 小節の区切り（8マスごと）は間を広げる（4px＋20px＝24px） */
+.score__cell:nth-child(8n + 1):not(:first-child) { margin-left: 20px; }
+
+.score__cell.is-on { background: var(--note-color); }
+.score__cell.is-ringing { box-shadow: var(--glow-soft); }
+
+.score__playhead {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--color-light);
+}
