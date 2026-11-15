@@ -90,8 +90,14 @@
 
 画面固有の部品（楽器の選択・分身の並びなど）は各画面設計に書き、2画面以上で使うようになったらここへ移す。
 
-## 3. 変更の手順
+## 3. 実装への写し方
+
+- 実装（`src/view/`）の CSS は `src/view/styles/` に置く。本書のトークンを写した `tokens.css`、共通部品を写した `components.css`、画面ごとに1ファイル（例: `top.css`）に分ける。値の正本は本フォルダで、実装側で値を変えない。
+- タイトル書体（[fonts/](fonts/) の `StickTitle.woff2` と `OFL.txt`）は `public/fonts/` に写して配信する。
+- 写した値が本フォルダとずれていないことを、単体テストで確かめる（実装側の `tokens.css` の値と [tokens/tokens.css](tokens/tokens.css) を突き合わせる）。
+
+## 4. 変更の手順
 
 1. 本書（規定の本文）と [tokens/tokens.css](tokens/tokens.css)・[components/部品.css](components/部品.css)（実数）を同じ変更で直す。
-2. 影響する画面設計・同名モックアップ・実装（`src/view/`・`index.html`）・E2E観点表を同じ変更で追従させる（→ [ドキュメント/AGENTS.md](../../../AGENTS.md)「連動して更新するもの」）。
+2. 影響する画面設計・同名モックアップ・実装（`src/view/`・`src/view/styles/`・`public/fonts/`・`index.html`）・E2E観点表を同じ変更で追従させる（→ [ドキュメント/AGENTS.md](../../../AGENTS.md)「連動して更新するもの」）。
 3. PR 本文に、変更した節と影響する成果物を書く。
