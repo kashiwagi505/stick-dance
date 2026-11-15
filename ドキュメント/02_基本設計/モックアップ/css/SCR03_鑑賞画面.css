@@ -1,0 +1,46 @@
+/*
+ * SCR03 鑑賞画面（SCR04 共有を開いた画面も読む）固有のスタイル。値は tokens.css のトークンだけを使う。
+ */
+
+.view__progress {
+  margin: 0;
+  font-size: var(--text-lead);
+  color: var(--color-light);
+  letter-spacing: 0.04em;
+}
+
+.view__end { min-width: 600px; }
+
+.view__buttons {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.view__url {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  text-align: left;
+  font-size: var(--text-small);
+  color: var(--color-haze);
+}
+
+.view__url[hidden] { display: none; }
+
+.view__url input {
+  min-height: var(--target-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-haze);
+  border-radius: var(--space-2);
+  background: var(--color-stage);
+  color: var(--color-light);
+  font-family: var(--font-key);
+  font-size: var(--text-small);
+}
+
+/* SCR04: 再生の前の本文 */
+.view__lead {
+  margin: 0;
+  font-size: var(--text-body);
+}
