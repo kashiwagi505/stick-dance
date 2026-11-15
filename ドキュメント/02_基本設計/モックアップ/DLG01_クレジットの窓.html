@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>棒人間ダンシング</title>
+  <link rel="stylesheet" href="../画面設計/デザインシステム/tokens/tokens.css">
+  <link rel="stylesheet" href="../画面設計/デザインシステム/components/部品.css">
+  <link rel="stylesheet" href="css/SCR01_トップ画面.css">
+  <link rel="stylesheet" href="css/DLG01_クレジットの窓.css">
+</head>
+<body>
+  <!-- DLG01 クレジットの窓。設計書: ../画面設計/DLG01_クレジットの窓.md。後ろはトップ（SCR01）の準備完了の状態 -->
+  <main class="top" data-state="ready">
+    <h1 class="top__title">棒人間ダンシング</h1>
+    <p class="top__lead">キーで棒人間を引っぱると、踊りが音になる。</p>
+    <div class="top__action">
+      <button type="button" class="button button--primary">はじめる</button>
+      <p class="status status--wait" role="status"></p>
+      <p class="top__note">音が出ます</p>
+    </div>
+    <button type="button" class="button button--secondary top__credit" id="credit">クレジット</button>
+  </main>
+
+  <dialog class="dialog credit" id="credit-dialog" aria-labelledby="credit-title">
+    <h2 class="dialog__title" id="credit-title">クレジット</h2>
+    <p class="credit__intro">このゲームは、次の素材とライブラリを使っています。ありがとうございます。</p>
+
+    <section class="credit__group" aria-labelledby="credit-sound">
+      <h3 id="credit-sound">楽器の音</h3>
+      <dl>
+        <div class="credit__item">
+          <dt>Virtuosity Drums</dt>
+          <dd>Versilian Studios / Karoryfer Samples ／ CC0 1.0</dd>
+          <dd class="credit__use">伴奏のドラムと、5人目・打楽器のタンバリン・トライアングルの音</dd>
+        </div>
+        <div class="credit__item">
+          <dt>Black And Blue Basses</dt>
+          <dd>Karoryfer Samples ／ CC0 1.0</dd>
+          <dd class="credit__use">2人目・ベースの音</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="credit__group" aria-labelledby="credit-font">
+      <h3 id="credit-font">書体</h3>
+      <dl>
+        <div class="credit__item">
+          <dt>Stick</dt>
+          <dd>Fontworks Inc. ／ SIL Open Font License 1.1</dd>
+          <dd class="credit__use">タイトルの文字</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="credit__group" aria-labelledby="credit-lib">
+      <h3 id="credit-lib">音を鳴らすしくみ</h3>
+      <dl>
+        <div class="credit__item">
+          <dt>Tone.js</dt>
+          <dd>Yotam Mann ほか ／ MIT License</dd>
+          <dd class="credit__use">楽器の音の読み込みと鳴らし方</dd>
+        </div>
+      </dl>
+    </section>
+
+    <p class="credit__note">旋律・和音・高い旋律の音と手拍子は、このゲームの中で作った音です。</p>
+    <div class="credit__close">
+      <button type="button" class="button button--secondary" id="close">閉じる</button>
+    </div>
+  </dialog>
+
+  <script src="js/DLG01_クレジットの窓.js"></script>
+</body>
+</html>

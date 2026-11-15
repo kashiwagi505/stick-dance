@@ -19,6 +19,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* hidden 属性の要素は、部品の display 指定より優先して隠す */
+[hidden] { display: none !important; }
+
 :focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);
@@ -50,6 +53,7 @@ kbd {
   border-radius: var(--radius-tube);
   font-family: var(--font-body);
   line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
   transition: box-shadow calc(var(--beat) / 2) var(--ease-light),
               border-color calc(var(--beat) / 2) var(--ease-light);
@@ -103,6 +107,8 @@ kbd {
 
 .status--wait { color: var(--color-haze); }
 
+.status--info { color: var(--color-light); }
+
 .status--wait::before {
   content: "";
   flex: none;
@@ -144,4 +150,110 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   .button { transition: none; }
   .status--wait::before { animation: none; opacity: 1; }
+}
+
+/* ---- キーの印（readme.md 1.3）。キーの名前を、押すものだと分かる形で出す ---- */
+kbd.key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.9em;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-haze);
+  border-bottom-width: 3px;
+  border-radius: 6px;
+  color: var(--color-light);
+  line-height: 1.5;
+}
+
+/* ---- 窓と重ねる案内（components/窓.md） ---- */
+.dialog {
+  width: 560px;
+  max-width: calc(100vw - var(--space-7));
+  max-height: calc(100vh - var(--space-7));
+  padding: var(--space-6);
+  border: 1px solid var(--color-floor);
+  border-radius: var(--radius-panel);
+  background: var(--color-stage-raised);
+  color: var(--color-light);
+  overflow: auto;
+}
+
+.dialog::backdrop { background: rgb(17 15 31 / 0.7); }
+
+.dialog__title {
+  margin: 0 0 var(--space-5);
+  font-size: var(--text-heading);
+  font-weight: var(--weight-bold);
+  line-height: 1.3;
+}
+
+.overlay {
+  position: absolute;
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--color-floor);
+  border-radius: var(--radius-panel);
+  background: var(--color-stage-raised);
+  color: var(--color-light);
+}
+
+.overlay--center {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  min-width: 400px;
+  text-align: center;
+}
+
+.overlay__title {
+  margin: 0;
+  font-size: var(--text-lead);
+  font-weight: var(--weight-bold);
+  line-height: 1.4;
+}
+
+.overlay__note {
+  margin: 0;
+  font-size: var(--text-small);
+  color: var(--color-haze);
+}
+
+.overlay[hidden] { display: none; }
+
+/* ---- 譜面の帯（components/譜面の帯.md） ---- */
+.score {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  width: max-content;
+}
+
+.score__row {
+  display: flex;
+  gap: 4px;
+}
+
+.score__cell {
+  flex: none;
+  width: 20px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--color-floor);
+}
+
+/* 小節の区切り（8マスごと）は間を広げる（4px＋20px＝24px） */
+.score__cell:nth-child(8n + 1):not(:first-child) { margin-left: 20px; }
+
+.score__cell.is-on { background: var(--note-color); }
+.score__cell.is-ringing { box-shadow: var(--glow-soft); }
+
+.score__playhead {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--color-light);
 }
