@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>棒人間ダンシング</title>
+  <!-- 共通の見た目はデザインシステムを直接読む（転記しない） -->
+  <link rel="stylesheet" href="../画面設計/デザインシステム/tokens/tokens.css">
+  <link rel="stylesheet" href="../画面設計/デザインシステム/components/部品.css">
+  <link rel="stylesheet" href="css/SCR01_トップ画面.css">
+</head>
+<body>
+  <!-- SCR01 トップ。設計書: ../画面設計/SCR01_トップ画面.md -->
+  <main class="top" data-state="loading">
+    <h1 class="top__title">棒人間ダンシング</h1>
+    <p class="top__lead">キーで棒人間を引っぱると、踊りが音になる。</p>
+
+    <!-- 舞台の飾り（読み上げない）。5つの照明＝最大5人、真ん中の1人＝これから踊る自分 -->
+    <div class="top__stage" aria-hidden="true">
+      <div class="spot spot--4"><span class="spot__cone"></span><span class="spot__mark"></span></div>
+      <div class="spot spot--2"><span class="spot__cone"></span><span class="spot__mark"></span></div>
+      <div class="spot spot--1"><span class="spot__cone"></span><span class="spot__mark"></span></div>
+      <div class="spot spot--3"><span class="spot__cone"></span><span class="spot__mark"></span></div>
+      <div class="spot spot--5"><span class="spot__cone"></span><span class="spot__mark"></span></div>
+      <svg class="figure" viewBox="0 0 120 200" width="120" height="200">
+        <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <circle class="figure__head" cx="60" cy="26" r="16"/>
+          <path class="figure__body" d="M60 44 V118"/>
+          <path class="figure__arm" d="M60 58 L28 98"/>
+          <path class="figure__arm figure__arm--right" d="M60 58 L92 98"/>
+          <path d="M60 118 L40 196 M60 118 L80 196"/>
+        </g>
+      </svg>
+      <span class="top__floor"></span>
+    </div>
+
+    <div class="top__action">
+      <button type="button" class="button button--primary" id="start" disabled>準備中</button>
+      <p class="status status--wait" id="status" role="status">楽器の音を読み込んでいます</p>
+      <p class="top__note">音が出ます</p>
+    </div>
+
+    <button type="button" class="button button--secondary top__credit" id="credit">クレジット</button>
+  </main>
+
+  <!-- ここから下はモックアップ専用（実装しない）。状態を切り替えて見比べるための操作 -->
+  <aside class="mock-panel" aria-label="モックアップの状態切り替え">
+    <span class="mock-panel__label">モックアップの状態</span>
+    <button type="button" data-mock-state="loading">準備中</button>
+    <button type="button" data-mock-state="ready">準備完了</button>
+    <button type="button" data-mock-state="error">読み込みの失敗</button>
+    <span class="mock-panel__log" id="mock-log" aria-live="polite"></span>
+  </aside>
+  <script src="js/SCR01_トップ画面.js"></script>
+</body>
+</html>
