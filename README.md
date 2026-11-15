@@ -17,7 +17,25 @@
 >
 > 残りを探すコマンド: `grep -rn -i "配達\|phaser\|tone\|ステージ\|種明かし" --exclude-dir=prototype --exclude-dir=node_modules .`
 
-この README は、リポジトリを clone した開発者がローカル開発環境をセットアップするための手順をまとめています。
+## 自宅Macで始める
+
+開発は会社PC（Windows）と自宅Macの2台で行う。Macで初めて触るときは次のとおり。
+
+```bash
+git clone https://github.com/kashiwagi505/stick-dance.git ~/Documents/app/stick-dance
+cd ~/Documents/app/stick-dance
+git switch dev/kashiwagi
+open prototype/index.html   # 試作を遊ぶ（クリックで開始。左手 WASD・右手 矢印キー・楽器 1〜5）
+```
+
+2回目からは `git pull` で会社PCの変更を取り込んでから始める。
+
+- **Claude Code はこのフォルダで開く。** 入口は [AGENTS.md](AGENTS.md)。今どこまで進んだかと次にやることは [要件定義](ドキュメント/01_要件定義/README.md) の「未決事項」と、secondbrain vault のプロジェクトページ（`30_Projects/棒人間ダンスで曲ができるゲーム/README.md`）にある
+- **hook は Mac では動かない。** `.claude/hooks/*.ps1` は Windows PowerShell 前提なので、`.claude/hooks/run.mjs` が Mac では何もせずに終わる。作業ツリーの分離やパス指定コミットの守りが効かないので、[Git運用手順](ドキュメント/基準書/Git運用手順.md) を自分で守る
+- **背景・トップページの絵は Mac で作る**（Codex。判断ログ D15）。作った画像は [素材/画像の記録](ドキュメント/素材/画像の記録.md) に1行ずつ書く
+- Node.js 22 以上を入れておく（技術選定の後、`npm ci` で依存を入れる）
+
+この README の以下は、リポジトリを clone した開発者がローカル開発環境をセットアップするための手順をまとめています。
 
 ## 開発環境のセットアップ
 

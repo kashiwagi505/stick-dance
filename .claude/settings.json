@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/session-start.ps1",
+            "command": "node .claude/hooks/run.mjs session-start.ps1",
             "timeout": 20,
             "statusMessage": "並行セッションの確認"
           }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/prompt-log.ps1",
+            "command": "node .claude/hooks/run.mjs prompt-log.ps1",
             "timeout": 20,
             "statusMessage": "繰り返し指示の記録"
           }
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/worktree-guard.ps1",
+            "command": "node .claude/hooks/run.mjs worktree-guard.ps1",
             "timeout": 20,
             "statusMessage": "作業ツリーの分離チェック"
           }
@@ -41,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/safe-commit-guard.ps1",
+            "command": "node .claude/hooks/run.mjs safe-commit-guard.ps1",
             "timeout": 20,
             "statusMessage": "コミット対象の確認"
           }
@@ -54,13 +54,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/ui-change-bug-reminder.ps1",
+            "command": "node .claude/hooks/run.mjs ui-change-bug-reminder.ps1",
             "timeout": 20,
             "statusMessage": "UI変更のバグ起票チェック"
           },
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/session-track.ps1",
+            "command": "node .claude/hooks/run.mjs session-track.ps1",
             "timeout": 20,
             "statusMessage": "セッション登録簿の更新"
           }
