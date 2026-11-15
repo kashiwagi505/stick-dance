@@ -1,15 +1,58 @@
-// 画面の入口。いまはトップページの仮の表示と、舞台の canvas を置くだけ。
-// 画面の構成（トップ・踊る・鑑賞・共有を開いた画面）は基本設計で決める（要件定義 README 7章）。
-// 遊べる試作は prototype/index.html にある
-import { DEFAULT_LOOP, loopSeconds } from './core/loop';
-import { createStage } from './view/stage';
+// 画面の入口。各層をつなぐだけで、処理の中身は各層に置く（実装方針1章）。
+// URL に #r= があれば共有を開いた画面（SCR04）、無ければトップ（SCR01）。画面はページ遷移せず表示を切り替える。
+import './view/styles/tokens.css';
+import './view/styles/components.css';
+import './view/styles/top.css';
+import './view/styles/play.css';
+import './view/styles/viewing.css';
+import './view/styles/credit.css';
+import { SoundEngine, loadSounds } from './audio/engine';
+import { decodeRecord } from './share/share';
+import { DEFAULT_SHARE } from './share/settings';
+import { mountPlay } from './view/play';
+import { mountTop } from './view/top';
+import { mountSharedFailure, mountViewing } from './view/viewing';
 
-const app = document.querySelector<HTMLElement>('#app');
-if (!app) throw new Error('#app が見つからない');
+const root = document.querySelector<HTMLElement>('#app');
+if (!root) throw new Error('#app が見つからない');
+const app = root;
 
-const title = document.createElement('h1');
-title.textContent = '棒人間ダンシング';
-const note = document.createElement('p');
-note.textContent = `準備中（ループ ${DEFAULT_LOOP.bars} 小節・約 ${loopSeconds(DEFAULT_LOOP).toFixed(1)} 秒）`;
-app.append(title, note);
-createStage(app);
+let engine: SoundEngine | null = null;
+const getEngine = (): SoundEngine => (engine ??= new SoundEngine());
+let cleanup: () => void = () => undefined;
+
+function showTop(): void {
+  cleanup();
+  cleanup = mountTop(app, loadSounds(), () => void startDancing());
+}
+
+async function startDancing(): Promise<void> {
+  await SoundEngine.start();
+  cleanup();
+  cleanup = mountPlay(app, getEngine(), (record, start) => {
+    cleanup = mountViewing(app, { kind: 'own', record, start, engine: getEngine() });
+  });
+}
+
+/** 「自分も踊る」: #r= を消してトップへ（ブラウザの「戻る」で共有URLへ戻れるよう履歴は足す） */
+function danceToo(): void {
+  history.pushState(null, '', `${location.pathname}${location.search}`);
+  showTop();
+}
+
+async function route(): Promise<void> {
+  cleanup();
+  if (!location.hash.startsWith('#r=')) {
+    showTop();
+    return;
+  }
+  const result = await decodeRecord(location.hash, DEFAULT_SHARE);
+  if (!result.ok) {
+    mountSharedFailure(app, result.reason, danceToo);
+    return;
+  }
+  cleanup = mountViewing(app, { kind: 'shared', record: result.record, getEngine, onDanceToo: danceToo });
+}
+
+window.addEventListener('popstate', () => void route());
+void route();
