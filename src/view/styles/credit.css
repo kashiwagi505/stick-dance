@@ -1,0 +1,51 @@
+/*
+ * DLG01 クレジットの窓 固有のスタイル。値は tokens.css のトークンだけを使う。
+ */
+
+.credit__intro {
+  margin: 0 0 var(--space-5);
+}
+
+.credit__group h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-small);
+  font-weight: var(--weight-bold);
+  color: var(--color-haze);
+  letter-spacing: 0.08em;
+}
+
+.credit__group + .credit__group { margin-top: var(--space-5); }
+
+.credit__group dl { margin: 0; }
+
+.credit__item {
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-floor);
+}
+
+.credit__item dt {
+  font-weight: var(--weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.credit__item dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.credit__use {
+  font-size: var(--text-small);
+  color: var(--color-haze);
+}
+
+.credit__note {
+  margin: var(--space-5) 0 0;
+  font-size: var(--text-small);
+  color: var(--color-haze);
+}
+
+.credit__close {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-5);
+}

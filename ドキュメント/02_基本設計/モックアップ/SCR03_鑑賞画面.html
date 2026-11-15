@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>棒人間ダンシング</title>
+  <link rel="stylesheet" href="../画面設計/デザインシステム/tokens/tokens.css">
+  <link rel="stylesheet" href="../画面設計/デザインシステム/components/部品.css">
+  <link rel="stylesheet" href="css/舞台.css">
+  <link rel="stylesheet" href="css/SCR03_鑑賞画面.css">
+</head>
+<body>
+  <!-- SCR03 鑑賞。設計書: ../画面設計/SCR03_鑑賞画面.md -->
+  <h1 class="visually-hidden">棒人間ダンシング</h1>
+  <main class="screen view" data-state="playing">
+    <h2 class="visually-hidden">鑑賞</h2>
+    <p class="view__progress" id="progress" role="status">鑑賞中 — 3 / 5 人</p>
+
+    <div class="stage">
+      <canvas class="stage__canvas" id="stage" width="960" height="540" aria-label="舞台"></canvas>
+
+      <section class="overlay overlay--center view__end" id="end" role="status" aria-labelledby="end-title" hidden>
+        <h3 class="overlay__title" id="end-title">おわり</h3>
+        <div class="view__buttons">
+          <button type="button" class="button button--primary" id="copy">共有URLをコピーする</button>
+          <button type="button" class="button button--secondary" id="again">もう一度見る</button>
+        </div>
+        <p class="status status--info" id="copy-status"></p>
+        <div class="view__url" id="url-box" hidden>
+          <label for="share-url">共有URL</label>
+          <input id="share-url" type="text" readonly value="https://kashiwagi505.github.io/stick-dance/#r=AQ…">
+        </div>
+        <p class="overlay__note">コピーしないまま再読み込みすると、この曲は消えます。</p>
+      </section>
+
+      <section class="overlay overlay--center" id="paused" role="status" aria-labelledby="paused-title" hidden>
+        <h3 class="overlay__title" id="paused-title">一時停止中</h3>
+        <p class="overlay__note">画面に戻ると続きから</p>
+      </section>
+    </div>
+
+    <div class="score" id="score" aria-hidden="true"></div>
+  </main>
+
+  <aside class="mock-panel" aria-label="モックアップの状態切り替え">
+    <span class="mock-panel__label">モックアップの状態</span>
+    <button type="button" data-mock-state="playing">鑑賞中</button>
+    <button type="button" data-mock-state="end">おわり</button>
+    <button type="button" data-mock-state="copied">コピーできた</button>
+    <button type="button" data-mock-state="failed">コピーできなかった</button>
+    <button type="button" data-mock-state="paused">一時停止中</button>
+  </aside>
+  <script src="js/舞台の描画.js"></script>
+  <script src="js/鑑賞の描画.js"></script>
+  <script src="js/SCR03_鑑賞画面.js"></script>
+</body>
+</html>

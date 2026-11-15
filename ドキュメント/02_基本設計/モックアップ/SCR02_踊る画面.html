@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>棒人間ダンシング</title>
+  <link rel="stylesheet" href="../画面設計/デザインシステム/tokens/tokens.css">
+  <link rel="stylesheet" href="../画面設計/デザインシステム/components/部品.css">
+  <link rel="stylesheet" href="css/舞台.css">
+  <link rel="stylesheet" href="css/SCR02_踊る画面.css">
+</head>
+<body>
+  <!-- SCR02 踊る。設計書: ../画面設計/SCR02_踊る画面.md -->
+  <h1 class="visually-hidden">棒人間ダンシング</h1>
+  <main class="play" data-state="first">
+    <h2 class="visually-hidden">踊る</h2>
+
+    <div class="play__bar">
+      <div class="instruments" role="group" aria-label="楽器">
+        <button type="button" class="instrument" style="--inst: var(--color-inst-1)" aria-pressed="true"><span class="instrument__num">1</span>旋律<span class="instrument__used"></span></button>
+        <button type="button" class="instrument" style="--inst: var(--color-inst-2)" aria-pressed="false"><span class="instrument__num">2</span>ベース<span class="instrument__used"></span></button>
+        <button type="button" class="instrument" style="--inst: var(--color-inst-3)" aria-pressed="false"><span class="instrument__num">3</span>和音<span class="instrument__used"></span></button>
+        <button type="button" class="instrument" style="--inst: var(--color-inst-4)" aria-pressed="false"><span class="instrument__num">4</span>高い旋律<span class="instrument__used"></span></button>
+        <button type="button" class="instrument" style="--inst: var(--color-inst-5)" aria-pressed="false"><span class="instrument__num">5</span>打楽器<span class="instrument__used"></span></button>
+      </div>
+      <p class="play__count" id="count">分身 0 / 5</p>
+      <div class="play__actions">
+        <button type="button" class="button button--secondary" id="remove" disabled>最後の1人を消す</button>
+        <button type="button" class="button button--primary" id="view" disabled>鑑賞へ</button>
+      </div>
+    </div>
+
+    <div class="stage">
+      <canvas class="stage__canvas" id="stage" width="960" height="540" aria-label="舞台"></canvas>
+
+      <section class="overlay play__hint" id="hint" aria-labelledby="hint-title">
+        <h3 class="overlay__title" id="hint-title">キーで手を引っぱる</h3>
+        <ul class="hint__list">
+          <li><span class="hint__keys"><kbd class="key">W</kbd><kbd class="key">A</kbd><kbd class="key">S</kbd><kbd class="key">D</kbd></span>画面の左の手</li>
+          <li><span class="hint__keys"><kbd class="key">↑</kbd><kbd class="key">←</kbd><kbd class="key">↓</kbd><kbd class="key">→</kbd></span>画面の右の手</li>
+          <li>頭が動くと、その高さの音が鳴る</li>
+        </ul>
+        <p class="overlay__note"><kbd class="key">1</kbd>〜<kbd class="key">5</kbd> で楽器を選べます</p>
+      </section>
+
+      <section class="overlay overlay--center" id="paused" role="status" aria-labelledby="paused-title" hidden>
+        <h3 class="overlay__title" id="paused-title">一時停止中</h3>
+        <p class="overlay__note"><kbd class="key">Space</kbd> で続きから</p>
+      </section>
+    </div>
+
+    <p class="play__guide"><span id="guide">1人目を踊っています — この周 0音（4音で残ります）</span><span id="event" role="status"></span></p>
+    <div class="score" id="score" aria-hidden="true"></div>
+  </main>
+
+  <aside class="mock-panel" aria-label="モックアップの状態切り替え">
+    <span class="mock-panel__label">モックアップの状態</span>
+    <button type="button" data-mock-state="first">1周目</button>
+    <button type="button" data-mock-state="two">分身2人</button>
+    <button type="button" data-mock-state="toview">鑑賞へを押した</button>
+    <button type="button" data-mock-state="paused">一時停止中</button>
+  </aside>
+  <script src="js/舞台の描画.js"></script>
+  <script src="js/SCR02_踊る画面.js"></script>
+</body>
+</html>

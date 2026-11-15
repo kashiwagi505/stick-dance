@@ -1,0 +1,119 @@
+/*
+ * SCR02 踊る画面 固有のスタイル。値は tokens.css のトークンだけを使う。
+ */
+
+.play {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--space-3);
+  min-height: 100vh;
+  padding: var(--space-3) 0;
+}
+
+/* ---- 上の帯: 楽器の選択・分身の数・操作 ---- */
+.play__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  width: 1216px;
+  max-width: calc(100vw - var(--space-6));
+}
+
+.instruments {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.instrument {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target-min);
+  padding: 0 var(--space-4) 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-tube);
+  background: transparent;
+  color: var(--color-haze);
+  font: inherit;
+  font-size: var(--text-small);
+  cursor: pointer;
+}
+
+/* 楽器の色の印（色＋名前で出す。デザインシステム 1.2） */
+.instrument::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--inst);
+  opacity: 0.55;
+}
+
+.instrument__num {
+  font-family: var(--font-key);
+  color: var(--color-haze);
+}
+
+.instrument__used:not(:empty) {
+  font-size: var(--text-small);
+  color: var(--color-haze);
+}
+
+.instrument[aria-pressed="true"] {
+  border-color: var(--color-light);
+  color: var(--color-light);
+}
+
+.instrument[aria-pressed="true"]::before {
+  opacity: 1;
+  box-shadow: 0 0 10px var(--inst);
+}
+
+.instrument:hover:not(:disabled) { color: var(--color-light); }
+.instrument:disabled { cursor: not-allowed; opacity: 0.5; }
+
+.play__count {
+  margin: 0 0 0 auto;
+  font-size: var(--text-small);
+  color: var(--color-haze);
+  white-space: nowrap;
+}
+
+.play__actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+/* 鑑賞へは上の帯に収めるため、主ボタンの最小幅だけを詰める */
+.play__actions .button--primary { min-width: 0; padding: 0 var(--space-5); }
+
+/* ---- 舞台の上のヒント（左上。棒人間を隠さない） ---- */
+.play__hint {
+  left: var(--space-4);
+  top: var(--space-4);
+  width: 380px;
+  padding: var(--space-4) var(--space-5);
+}
+
+.hint__list {
+  margin: var(--space-2) 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.hint__list li { display: flex; align-items: center; gap: var(--space-3); }
+.hint__keys { display: inline-flex; gap: var(--space-1); }
+
+/* ---- 下: いまの案内と譜面の帯 ---- */
+.play__guide {
+  margin: 0;
+  min-height: calc(var(--text-body) * var(--leading-body));
+  font-size: var(--text-body);
+  color: var(--color-light);
+}
+
+.play__guide #event:not(:empty)::before { content: " "; }

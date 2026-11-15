@@ -1,0 +1,58 @@
+/*
+ * SCR02〜SCR04 で共通の、舞台の枠と画面のまとめ方（モックアップ用）。
+ * 色・余白は tokens.css のトークンだけを使う。
+ */
+
+.screen {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--space-3);
+  min-height: 100vh;
+  padding: var(--space-4) 0;
+}
+
+.stage {
+  position: relative;
+  width: var(--frame-width);
+  height: var(--frame-height);
+}
+
+.stage__canvas {
+  display: block;
+  width: var(--frame-width);
+  height: var(--frame-height);
+  background: var(--color-stage);
+}
+
+/* ---- モックアップ専用（実装しない） ---- */
+.mock-panel {
+  position: fixed;
+  left: var(--space-4);
+  bottom: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 280px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--color-haze);
+  border-radius: var(--space-2);
+  background: var(--color-stage-raised);
+  font-size: var(--text-small);
+  color: var(--color-haze);
+  z-index: 10;
+}
+
+.mock-panel button {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-floor);
+  border-radius: var(--space-1);
+  background: transparent;
+  color: var(--color-light);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mock-panel button[aria-pressed="true"] { border-color: var(--color-light); }
