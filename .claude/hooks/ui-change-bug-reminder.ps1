@@ -7,8 +7,9 @@ if (-not $json) { exit 0 }
 $f = $json.tool_input.file_path
 if (-not $f) { exit 0 }
 $f = $f -replace '\\', '/'
-# 画面の実装ファイルが置かれるパス（正規表現）。画面（Phaser のシーン）は src/view/、HTMLの入口はルートの index.html
-$UiPathPattern = '/(src/view/|index\.html$)'
+# 画面の実装ファイルが置かれるパス（正規表現）。画面（Canvas の描画と HTML の画面）は src/view/、HTMLの入口はルートの index.html。
+# ルートは本体ツリー（stick-dance/）か作業ツリー（.claude/worktrees/<作業名>/）。prototype/ などの index.html は対象にしない
+$UiPathPattern = '/(src/view/|(stick-dance|\.claude/worktrees/[^/]+)/index\.html$)'
 if ($f -notmatch $UiPathPattern) { exit 0 }
 
 # リマインドはセッションにつき1回だけ注入する（毎編集で繰り返さない）
