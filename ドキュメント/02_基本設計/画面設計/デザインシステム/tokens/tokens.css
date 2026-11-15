@@ -1,0 +1,79 @@
+/*
+ * 棒人間ダンシング デザイントークン（共通外観の実数の正本）
+ * 規定の本文は ../readme.md。値を変えるときは readme.md の「変更の手順」に従う。
+ * モックアップはこのファイルを相対パスで直接読む。実装（src/view/）へは同じ値を写す（置き場所は実装時に決める）。
+ */
+
+/* タイトル書体: Stick（Fontworks, SIL OFL 1.1）。「棒人間ダンシング」の8文字だけに切り出したもの */
+@font-face {
+  font-family: "Stick Title";
+  src: url("../fonts/StickTitle.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+:root {
+  /* ---- 色: 舞台（画面の地と面） ---- */
+  --color-stage: #110f1f;        /* 夜の舞台。全画面の地 */
+  --color-stage-raised: #1c1931; /* 窓・案内の面 */
+  --color-floor: #2e2a4a;        /* 床の線・区切り・枠 */
+
+  /* ---- 色: 照明（文字・棒人間・主ボタン） ---- */
+  --color-light: #f4f0ff;        /* 照明の白。本文・棒人間・主ボタンの地 */
+  --color-haze: #9d97bb;         /* もや。補足の文字・押せない状態 */
+
+  /* ---- 色: 楽器（楽器を表すときだけ使う。UIの飾りに使わない） ---- */
+  --color-inst-1: #ffcf5a; /* 1人目 旋律（シンセのリード） 黄 */
+  --color-inst-2: #5ad1ff; /* 2人目 ベース（エレキベース） 水色 */
+  --color-inst-3: #ff8fc4; /* 3人目 和音（ひずんだギター風） 桃 */
+  --color-inst-4: #8be38b; /* 4人目 高い旋律（シンセのプラック） 緑 */
+  --color-inst-5: #c9a2ff; /* 5人目 打楽器（手拍子とタンバリン） 紫 */
+
+  /* ---- 書体 ---- */
+  --font-title: "Stick Title", var(--font-body);
+  --font-body: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  --font-key: ui-monospace, "SF Mono", "Consolas", monospace; /* キー名（WASD・←↑↓→）だけ */
+
+  /* ---- 文字の大きさ（px。PCだけなので固定値） ---- */
+  --text-title: 88px;   /* タイトル（Stick Title。トップだけ） */
+  --text-heading: 28px; /* 窓・画面の見出し */
+  --text-lead: 20px;    /* リード文・主ボタン */
+  --text-body: 18px;    /* 本文 */
+  --text-small: 16px;   /* 補足。これより小さくしない */
+  --leading-body: 1.7;
+  --weight-regular: 400;
+  --weight-bold: 700;
+
+  /* ---- 余白（4の倍数） ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ---- 形 ---- */
+  --radius-tube: 999px;  /* ボタン。ネオン管の端と棒人間の線端（丸）にそろえる */
+  --radius-panel: 12px;  /* 窓・案内の面 */
+  --line-figure: 7px;    /* 棒人間の線の太さ（舞台 960×540 のとき） */
+  --target-min: 48px;    /* クリック対象の最小の高さ・幅 */
+
+  /* ---- 光（影の代わり。舞台では影ではなく光で浮かせる） ---- */
+  --glow-light: 0 0 4px rgb(244 240 255 / 0.9), 0 0 16px rgb(244 240 255 / 0.45), 0 0 40px rgb(244 240 255 / 0.2);
+  --glow-soft: 0 0 12px rgb(244 240 255 / 0.25);
+
+  /* ---- フォーカス ---- */
+  --focus-ring: 3px solid var(--color-light);
+  --focus-offset: 4px;
+
+  /* ---- 動き（拍に合わせる。124 BPM） ---- */
+  --beat: 484ms;          /* 4分音符1つ = 60 / 124 秒 */
+  --ease-light: cubic-bezier(0.2, 0.7, 0.2, 1); /* 照明が点く・消える */
+
+  /* ---- 表示幅 ---- */
+  --frame-width: 960px;   /* 舞台の幅（Canvas 960×540） */
+  --frame-height: 540px;
+}

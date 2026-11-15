@@ -1,0 +1,193 @@
+/*
+ * SCR01 トップ画面 固有のスタイル。
+ * 色・書体・余白・光・動きは tokens.css のトークンだけを使う（デザインシステム readme.md）。
+ * 寸法の数値（照明の位置・棒人間の大きさ）はこの画面だけの配置。
+ */
+
+.top {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: 100vh;
+  padding: var(--space-7) 0 var(--space-8);
+  text-align: center;
+}
+
+/* ---- タイトル（Stick Title。ネオン管として一度だけ点く） ---- */
+.top__title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: var(--text-title);
+  font-weight: var(--weight-regular);
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  color: var(--color-light);
+  text-shadow: var(--glow-light);
+  animation: neon-on calc(var(--beat) * 2) linear both;
+}
+
+.top__lead {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-lead);
+  color: var(--color-light);
+}
+
+/* ---- 舞台の飾り: 5つの照明と床と棒人間 ---- */
+.top__stage {
+  position: relative;
+  width: var(--frame-width);
+  height: 248px;
+  margin-top: var(--space-5);
+}
+
+.top__floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  height: 2px;
+  background: linear-gradient(to right, transparent, var(--color-floor) 15%, var(--color-floor) 85%, transparent);
+}
+
+/* 照明1つ。--spot に楽器の色、--x に床の上の中心の位置 */
+.spot {
+  position: absolute;
+  top: 0;
+  bottom: 4px;
+  left: calc(var(--x) - 70px);
+  width: 140px;
+  opacity: 0.22;
+  transition: opacity var(--beat) var(--ease-light);
+}
+
+.spot--1 { --spot: var(--color-inst-1); --x: 480px; --order: 0; }
+.spot--2 { --spot: var(--color-inst-2); --x: 330px; --order: 1; }
+.spot--3 { --spot: var(--color-inst-3); --x: 630px; --order: 2; }
+.spot--4 { --spot: var(--color-inst-4); --x: 180px; --order: 3; }
+.spot--5 { --spot: var(--color-inst-5); --x: 780px; --order: 4; }
+
+.spot__cone {
+  position: absolute;
+  inset: 0 0 12px;
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--spot) 0%, transparent),
+    color-mix(in srgb, var(--spot) 30%, transparent));
+}
+
+.spot__mark {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 24px;
+  border: 2px solid var(--spot);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--spot) 45%, transparent), transparent);
+}
+
+/* 1人目の照明（これから踊る自分）は最初から点いている */
+.spot--1 { opacity: 1; }
+
+/* 準備ができたら、残りの4つが人の順番に1拍ずつ点く */
+.top[data-state="ready"] .spot {
+  opacity: 1;
+  transition-delay: calc(var(--beat) * var(--order));
+}
+
+/* 失敗したら、残りの照明は消えたまま。音は鳴らないので「音が出ます」も出さない */
+.top[data-state="error"] .spot:not(.spot--1) { opacity: 0.1; }
+.top[data-state="error"] .top__note { visibility: hidden; }
+
+/* 棒人間（楽器が決まる前なので照明の白）。拍に合わせて小さく弾む */
+.figure {
+  position: absolute;
+  left: calc(480px - 48px);
+  bottom: 16px;
+  width: 96px;
+  height: 160px;
+  stroke: var(--color-light);
+  stroke-width: 5.2;
+  overflow: visible;
+  filter: drop-shadow(var(--glow-soft));
+  transform-origin: 50% 100%;
+  animation: figure-bounce var(--beat) var(--ease-light) infinite alternate;
+}
+
+.figure__arm { transform-origin: 60px 58px; animation: arm-sway calc(var(--beat) * 2) var(--ease-light) infinite alternate; }
+.figure__arm--right { animation-direction: alternate-reverse; }
+
+/* ---- 操作 ---- */
+.top__action {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.top__note {
+  margin: 0;
+  font-size: var(--text-small);
+  color: var(--color-haze);
+}
+
+.top__credit {
+  position: absolute;
+  right: var(--space-6);
+  bottom: var(--space-5);
+}
+
+/* ---- 動き ---- */
+@keyframes neon-on {
+  0% { opacity: 0; }
+  10% { opacity: 0.85; }
+  14% { opacity: 0.15; }
+  22% { opacity: 1; }
+  26% { opacity: 0.45; }
+  34%, 100% { opacity: 1; }
+}
+
+@keyframes figure-bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); }
+}
+
+@keyframes arm-sway {
+  from { transform: rotate(-6deg); }
+  to { transform: rotate(8deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top__title, .figure, .figure__arm { animation: none; }
+  .spot, .top[data-state="ready"] .spot { transition: none; }
+}
+
+/* ---- モックアップ専用（実装しない） ---- */
+.mock-panel {
+  position: fixed;
+  left: var(--space-4);
+  bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--color-haze);
+  border-radius: var(--space-2);
+  background: var(--color-stage-raised);
+  font-size: var(--text-small);
+  color: var(--color-haze);
+}
+
+.mock-panel button {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-floor);
+  border-radius: var(--space-1);
+  background: transparent;
+  color: var(--color-light);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mock-panel button[aria-pressed="true"] { border-color: var(--color-light); }
