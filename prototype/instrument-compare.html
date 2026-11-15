@@ -9,20 +9,22 @@
   :root { --bg:#14161c; --card:#1d2029; --fg:#e8e8ee; --dim:#8a90a0; --line:#2c303b; --accent:#ffcf5a; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--fg); font-family: system-ui, "Yu Gothic UI", "Hiragino Sans", sans-serif; }
-  main { max-width: 900px; margin: 0 auto; padding: 24px 16px 120px; }
+  main { max-width: 920px; margin: 0 auto; padding: 24px 16px 130px; }
   h1 { font-size: 22px; margin: 0 0 6px; }
-  p.lead { color: var(--dim); margin: 0 0 18px; line-height: 1.7; font-size: 14px; }
+  p.lead { color: var(--dim); margin: 0 0 16px; line-height: 1.7; font-size: 14px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom: 12px; }
+  .card.style { border-color: #4a4f5c; }
   .card h2 { font-size: 16px; margin: 0 0 4px; display:flex; align-items:center; gap:10px; }
   .card h2 .sw { width:14px; height:14px; border-radius:50%; display:inline-block; }
   .card h2 label { margin-left:auto; font-size: 13px; font-weight: normal; color: var(--dim); }
   .card .role { color: var(--dim); font-size: 12px; margin: 0 0 10px; }
-  .opts { display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+  .opts { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
   .opts label { display:block; padding: 8px 10px; border:1px solid var(--line); border-radius: 8px; cursor:pointer; font-size: 14px; line-height: 1.45; }
   .opts label:has(input:checked) { border-color: var(--accent); background: rgba(255,207,90,.06); }
   .opts small { display:block; color: var(--dim); font-size: 12px; margin-left: 22px; }
+  .sub { margin-top: 10px; font-size: 13px; color: var(--dim); display:flex; gap: 14px; flex-wrap: wrap; }
   .bar { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(20,22,28,.96); border-top: 1px solid var(--line); padding: 12px 16px; }
-  .bar .in { max-width: 900px; margin: 0 auto; display:flex; flex-wrap:wrap; gap: 10px 14px; align-items:center; font-size: 14px; }
+  .bar .in { max-width: 920px; margin: 0 auto; display:flex; flex-wrap:wrap; gap: 10px 14px; align-items:center; font-size: 14px; }
   button { font: inherit; padding: 10px 22px; border-radius: 8px; border: 1px solid var(--line); background:#2a2f3b; color:var(--fg); cursor:pointer; }
   button.play { background: var(--accent); color:#1a1a1a; border-color: var(--accent); font-weight: 600; }
   #status { color: var(--dim); font-size: 13px; }
@@ -35,27 +37,24 @@
 <body>
 <main>
   <h1>楽器の割り当て</h1>
-  <p class="lead">ゲームで分身5人が持つ楽器を決めます。役ごとに1つずつ選んで、下の「再生」で全員が重なった音を聞いてください（2周で止まります）。
-  右上のチェックを外すと、その人だけ黙ります。ドラムは決めた Virtuosity Drums（部屋の響きあり）が常に鳴ります。
-  素材は GitHub から直接読むので、新しい楽器を選んだ最初の1回は数秒〜十数秒かかります。
-  <br>※ グランドピアノ以外は CC0（表記不要）。グランドピアノ（Salamander）は CC BY 3.0 で、ゲーム内に作者名の表示が要ります。</p>
+  <p class="lead">まず「曲の雰囲気」でテンポとリズムの型を選び、役ごとに楽器を1つずつ選んで、下の「再生」で全員が重なった音を聞いてください（2周で止まります）。
+  各役の「鳴らす」を外すと、その人だけ黙ります。新しい録音の楽器を選んだ最初の1回は、読み込みに少し時間がかかります。
+  <br>「合成」と書いた楽器はその場で作る音で、権利の心配がありません（POP・ROCK のドラムマシンやシンセはもともと電子楽器の音です）。録音の楽器はグランドピアノだけ CC BY 3.0（作者名の表示が要る）、ほかは CC0 です。</p>
   <div id="roles"></div>
 </main>
 <div class="bar"><div class="in">
   <button class="play" id="play">再生</button><button id="stop">止める</button>
-  <label><input type="checkbox" id="drums" checked> ドラムも鳴らす</label>
   <span id="status"></span>
   <div class="beat" id="beat"></div>
 </div></div>
 <script>
 "use strict";
-const BPM = 100, STEP = 60 / BPM / 2, STEPS = 32, LOOPS = 2;
+const STEPS = 32, LOOPS = 2;
 const SCALE = [57, 60, 62, 64, 67, 69, 72, 74, 76, 79, 81];
 const ROOTS = [45, 41, 36, 43];
 const CHORDS = [[57, 60, 64], [53, 57, 60], [55, 60, 64], [55, 59, 62]];
 const LEAD = [5,6,7,null,6,5,null,4,  3,null,5,6,null,5,3,null,  4,5,7,8,7,null,5,null,  6,null,5,4,3,null,null,null];
 const HIGH = { 9: 7, 13: 8, 25: 9, 27: 8, 29: 7 };
-// 打楽器は、頭の高さ（0〜10）で音の種類が変わる。踊ったときに出そうな上下
 const PERC = [null,2,null,6, 9,null,4,8,  null,1,null,6, 10,null,5,null,  null,2,7,6, 9,null,4,8,  1,null,3,6, 9,null,10,null];
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const NN = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
@@ -63,153 +62,232 @@ const nameOf = m => NN[m % 12] + (Math.floor(m / 12) - 1);
 const toMidi = n => { const m = /^([A-G]#?)(-?\d)$/.exec(n); return NN.indexOf(m[1]) + (Number(m[2]) + 1) * 12; };
 const V = "https://raw.githubusercontent.com/sgossner/VSCO-2-CE/master/";
 const VD = "https://raw.githubusercontent.com/sfzinstruments/virtuosity_drums/master/Samples/";
+const RAW = "https://raw.githubusercontent.com/sfzinstruments/";
 const enc = s => s.split("/").map(encodeURIComponent).join("/");
 
-// ---------- 楽器（音の高さは実際に測って合わせた。VSCO 2 の多くはファイル名より1オクターブ高い） ----------
-// map(): { 実際の音の名前: URL }
+// ---------- 曲の雰囲気（テンポとリズムの型） ----------
+const STYLES = {
+  pop:  { name: "POP（ダンスポップ）", note: "124。キックが毎拍ドン・ドン、裏拍にハイハット、ベースはオクターブを行き来", bpm: 124 },
+  rock: { name: "ROCK（8ビート）", note: "120。キックとスネアのはっきりした8ビート、ベースは8分で刻む", bpm: 120 },
+  now:  { name: "いままでの型", note: "100。ここまでの聞き比べと同じ", bpm: 100 },
+};
+
+// ---------- 録音の楽器（音の高さは実際に測って合わせた） ----------
 function vscoMap(dir, names, file, shift) { const u = {}; for (const n of names) u[nameOf(toMidi(n) + shift)] = V + enc(`${dir}/${file(n)}`); return u; }
 const SAL = (() => { const u = {}; for (const n of ["A1","C2","D#2","F#2","A2","C3","D#3","F#3","A3","C4","D#4","F#4","A4","C5","D#5","F#5","A5","C6","D#6","F#6","A6","C7"]) u[n] = "https://tonejs.github.io/audio/salamander/" + n.replace("#", "s") + ".mp3"; return u; })();
-const INST = {
-  grand:   { name: "グランドピアノ", note: "Salamander Grand Piano（CC BY 3.0）", map: () => SAL, vol: -6, release: 1 },
-  upright: { name: "アップライトピアノ", note: "VSCO 2。家のピアノのような素朴な音", vol: -2, release: 1,
+const lowered = (base, names, file) => { const u = {}; for (const n of names) u[nameOf(toMidi(n.toUpperCase()) - 12)] = base + file(n); return u; };
+const SAMPLED = {
+  grand:   { name: "グランドピアノ", note: "録音（CC BY 3.0）", map: () => SAL, vol: -6, release: 1 },
+  upright: { name: "アップライトピアノ", note: "録音。素朴な家のピアノ", vol: -2, release: 1,
              map: () => { const u = {}; for (let i = 8; i <= 40; i += 4) u[nameOf(21 + 2 * i)] = V + enc(`Keys/Upright Piano/Player_dyn2_rr1_${String(i).padStart(3, "0")}.wav`); return u; } },
-  marimba: { name: "マリンバ", note: "VSCO 2。木を叩く丸い音", vol: -4, release: 0.6,
+  marimba: { name: "マリンバ", note: "録音。木を叩く丸い音", vol: -4, release: 0.6,
              map: () => vscoMap("Percussion/Marimba", ["F1","C2","G2","B2","F3","C4","G4","B4","F5","C6"], n => `Marimba_hit_Outrigger_${n}_loud_01.wav`, 12) },
-  harp:    { name: "ハープ", note: "VSCO 2。はじく弦のきらめき", vol: -2, release: 1.5,
-             map: () => { const f = { E1: "f", G1: "mp", D7: "f", F7: "f" }; return vscoMap("Strings/Harp", ["E1","G1","B1","D2","F2","A2","C3","E3","G3","B3","D4","F4","A4","C5","E5","G5","B5","D6","F6","A6"], n => `KSHarp_${n}_${f[n] || "mf"}.wav`, 0); } },
-  organ:   { name: "オルガン", note: "VSCO 2。教会のパイプオルガン（静かな音栓）", vol: -10, release: 0.4,
+  harp:    { name: "ハープ", note: "録音。はじく弦のきらめき", vol: -2, release: 1.5,
+             map: () => { const f = { E1: "f", G1: "mp" }; return vscoMap("Strings/Harp", ["E1","G1","B1","D2","F2","A2","C3","E3","G3","B3","D4","F4","A4","C5","E5","G5","B5","D6","F6","A6"], n => `KSHarp_${n}_${f[n] || "mf"}.wav`, 0); } },
+  organ:   { name: "パイプオルガン", note: "録音", vol: -10, release: 0.4,
              map: () => { const u = {}; for (let n = 128; n <= 176; n += 6) u[nameOf(n - 86)] = V + enc(`Keys/Organ/Quiet/NT5_Man3Quiet_${n}_rr1.wav`); return u; } },
-  strings: { name: "弦のアンサンブル", note: "VSCO 2。バイオリンの合奏で伸ばす音", vol: -8, release: 0.8,
+  strings: { name: "弦のアンサンブル", note: "録音。バイオリンの合奏", vol: -8, release: 0.8,
              map: () => vscoMap("Strings/Violin Section/susVib", ["G2","A2","B2","D3","F#3","A3","C4","E4","G4","B4","D5"], n => `VlnEns_susVib_${n}_v2.wav`, 12) },
-  glock:   { name: "グロッケン", note: "VSCO 2。鉄琴。キラキラ（高さは耳で要確認）", vol: -8, release: 1.5,
+  glock:   { name: "グロッケン", note: "録音。鉄琴", vol: -8, release: 1.5,
              map: () => vscoMap("Percussion/Glock", ["G4","C5","G5","C6","G6","C7"], n => `glock_medium_${n}.wav`, 12) },
-  xylo:    { name: "木琴", note: "VSCO 2。硬く明るい木の音", vol: -8, release: 0.5,
+  xylo:    { name: "木琴", note: "録音", vol: -8, release: 0.5,
              map: () => vscoMap("Percussion/Xylo", ["G3","C4","G4","C5","G5","C6","G6","C7"], n => `Xylo_Medium_${n}_ff_01_far.wav`, 12) },
-  pizz:    { name: "弦のピチカート", note: "VSCO 2。バイオリンの合奏で弦をはじく", vol: -4, release: 0.5,
+  pizz:    { name: "弦のピチカート", note: "録音", vol: -4, release: 0.5,
              map: () => vscoMap("Strings/Violin Section/Pizz", ["G2","A2","B2","D3","F#3","A3","C4","E4","B4","D5"], n => `VlnEns_Pizz_${n}_v2_rr1.wav`, 12) },
-  sneaky:  { name: "Sneakybass", note: "CC0", vol: 8, release: 0.4,
-             // ファイル名より1オクターブ低く鳴る（測定）
-             map: () => { const u = {}; for (const n of ["c2","d2","e2","f2","g2","a2","b2","c3","e3","g3","c4"]) u[nameOf(toMidi(n.toUpperCase()) - 12)] = `https://raw.githubusercontent.com/sfzinstruments/karoryfer.sneakybass/main/Samples/pluck/sneakybass_${n}_pluck_rr1.wav`; return u; } },
+  sneaky:  { name: "コントラバス（Sneakybass）", note: "録音。指ではじく。柔らかい", vol: 8, release: 0.4,
+             map: () => lowered(`${RAW}karoryfer.sneakybass/main/Samples/pluck/`, ["c2","d2","e2","f2","g2","a2","b2","c3","e3","g3","c4"], n => `sneakybass_${n}_pluck_rr1.wav`) },
+  ebass:   { name: "エレキベース", note: "録音（Black And Blue Basses、CC0）。POP・ROCK の定番", vol: 0, release: 0.3,
+             map: () => lowered(`${RAW}karoryfer.black-and-blue-basses/main/Samples/darkblack/reg/`, ["b1","c2","d2","e2","f2","g2","a2","b2","c3","e3","g3","c4"], n => `darkblack_${n}_mf_rr1.wav`) },
+};
+
+// ---------- 合成の楽器 ----------
+let fx = null; // 共通のエフェクト（buildCommon で作る）
+const SYNTH = {
+  synbass:  { name: "シンセベース", note: "合成。太く弾む", make: () => { const s = new Tone.MonoSynth({ oscillator: { type: "fatsawtooth", count: 2, spread: 10 }, filter: { Q: 2 }, envelope: { attack: 0.003, decay: 0.2, sustain: 0.5, release: 0.1 }, filterEnvelope: { attack: 0.002, decay: 0.15, sustain: 0.3, baseFrequency: 90, octaves: 3.5 } }); s.volume.value = -8; return s.connect(fx.comp); } },
+  pluck:    { name: "シンセのプラック", note: "合成。はじくような明るいシンセ", make: () => { const s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "fatsquare", count: 2, spread: 15 }, envelope: { attack: 0.002, decay: 0.18, sustain: 0.05, release: 0.25 } }); s.volume.value = -16; return s.connect(fx.delay); } },
+  lead:     { name: "シンセのリード", note: "合成。伸びる POP のリード", make: () => { const s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "fatsawtooth", count: 3, spread: 20 }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.5, release: 0.3 } }); s.volume.value = -18; return s.connect(fx.chorus); } },
+  synpad:   { name: "シンセパッド", note: "合成。ふわっと広がる", make: () => { const s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "fatsawtooth", count: 3, spread: 30 }, envelope: { attack: 0.25, decay: 0.4, sustain: 0.7, release: 0.8 } }); s.volume.value = -22; return s.connect(fx.padFilter); } },
+  guitar:   { name: "ひずんだギター風", note: "合成。ROCK のパワーコード（録音のギターは権利を確認中）", make: () => { const s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sawtooth" }, envelope: { attack: 0.005, decay: 0.3, sustain: 0.6, release: 0.15 } }); s.volume.value = -20; return s.connect(fx.dist); } },
+  bell:     { name: "シンセのベル", note: "合成。FM のきらきら", make: () => { const s = new Tone.PolySynth(Tone.FMSynth, { harmonicity: 3.5, modulationIndex: 10, envelope: { attack: 0.002, decay: 0.9, sustain: 0, release: 0.4 }, modulationEnvelope: { attack: 0.002, decay: 0.5, sustain: 0 } }); s.volume.value = -16; return s.connect(fx.verb); } },
+};
+const INST = { ...SAMPLED, ...SYNTH };
+
+// ---------- ドラムと打楽器 ----------
+const vdKit = m => ({
+  kick: `${VD}${m}/kick/${m}_kick_snoff_vl4_rr1.flac`, snare: `${VD}${m}/snare/${m}_snare_center_vl30.flac`,
+  hat1: `${VD}${m}/hh/${m}_hh_closed_vl3_rr1.flac`, hat2: `${VD}${m}/hh/${m}_hh_closed_vl3_rr2.flac`,
+  hat3: `${VD}${m}/hh/${m}_hh_closed_vl2_rr3.flac`, hat4: `${VD}${m}/hh/${m}_hh_closed_vl2_rr4.flac`,
+  open: `${VD}${m}/hh/${m}_hh_half_vl3_rr1.flac`, crash: `${VD}${m}/crash/${m}_crash_crash_vl3_rr1.flac`,
+});
+const DRUMS = {
+  machine: { name: "ドラムマシン", note: "合成。POP の定番の締まった音（キック・手拍子・ハイハット）" },
+  mid:     { name: "生ドラム・近め", note: "録音（Virtuosity Drums、CC0）。輪郭がはっきり" },
+  room:    { name: "生ドラム・部屋の響き", note: "録音（同上）。前回選んだもの" },
 };
 const PERC_KITS = {
-  latin: { name: "ラテン", note: "低い→トゥンバ、コンガ、ボンゴ、高い→アゴゴ",
-    files: { a: "room/tumba/Tumba_24_HitN_101_127_rr1_Far.wav", b: "room/conga/Conga_17_HitHM1_1_70_rr1_Far.wav", c: "room/bongol/BongoL_Hit1_v1_rr1_Far.wav", c2: "room/bongoh/BongoH_Hit1_v1_rr1_Far.wav", d: "room/agogo/Agogo_High_v1_rr1_Far.wav" } },
-  wood:  { name: "タムと木と金物", note: "低い→タム（低）、タム（高）、ウッドブロック、高い→カウベル",
-    files: { a: "room/ltom/room_ltom_center_vl8.flac", b: "room/htom/room_htom_center_vl8.flac", c: "oh/woodblock/woodblock_hi_vl2_rr1.wav", c2: "oh/woodblock/woodblock_hi_vl2_rr2.wav", d: "room/cowbell/Cowbell1_Normal_v1_rr1_Far.wav" } },
-  small: { name: "小物", note: "低い→シェイカー、タンバリン、クラベス、高い→トライアングル",
-    files: { a: "room/shaker/LShaker_Shake1D_rr1_Far.wav", b: "room/tambourine/Tamb1_Shake_rr1_Far.wav", c: "room/claves/Claves1_Hit_v1_rr1_Far.wav", c2: "room/claves/Claves1_Hit_v1_rr2_Far.wav", d: "room/triangle/Triangle1_HitM_v1_rr1_Far.wav" } },
+  clap:  { name: "手拍子とタンバリン", note: "低い→手拍子（合成）、高い→タンバリン・トライアングル", files: { b: "perc/room/tambourine/Tamb1_Shake_rr1_Far.wav", d: "perc/room/triangle/Triangle1_HitM_v1_rr1_Far.wav" } },
+  latin: { name: "ラテン", note: "トゥンバ、コンガ、ボンゴ、アゴゴ",
+    files: { a: "perc/room/tumba/Tumba_24_HitN_101_127_rr1_Far.wav", b: "perc/room/conga/Conga_17_HitHM1_1_70_rr1_Far.wav", c: "perc/room/bongol/BongoL_Hit1_v1_rr1_Far.wav", c2: "perc/room/bongoh/BongoH_Hit1_v1_rr1_Far.wav", d: "perc/room/agogo/Agogo_High_v1_rr1_Far.wav" } },
+  wood:  { name: "タムとカウベル", note: "タム（低）、タム（高）、ウッドブロック、カウベル",
+    files: { a: "room/ltom/room_ltom_center_vl8.flac", b: "room/htom/room_htom_center_vl8.flac", c: "perc/oh/woodblock/woodblock_hi_vl2_rr1.wav", c2: "perc/oh/woodblock/woodblock_hi_vl2_rr2.wav", d: "perc/room/cowbell/Cowbell1_Normal_v1_rr1_Far.wav" } },
+  small: { name: "小物", note: "シェイカー、タンバリン、クラベス、トライアングル",
+    files: { a: "perc/room/shaker/LShaker_Shake1D_rr1_Far.wav", b: "perc/room/tambourine/Tamb1_Shake_rr1_Far.wav", c: "perc/room/claves/Claves1_Hit_v1_rr1_Far.wav", c2: "perc/room/claves/Claves1_Hit_v1_rr2_Far.wav", d: "perc/room/triangle/Triangle1_HitM_v1_rr1_Far.wav" } },
 };
-const ROLES = [
-  { key: "lead", label: "1人目・旋律", color: "#ffcf5a", desc: "頭の高さがそのまま音の高さ。曲の顔", opts: ["grand", "upright", "marimba", "harp"] },
-  { key: "bass", label: "2人目・ベース", color: "#5ad1ff", desc: "低い音で曲を支える（素材は Sneakybass に決定済み。高さだけ選ぶ）", opts: ["sneaky:0", "sneaky:12"] },
-  { key: "pad", label: "3人目・和音", color: "#ff8fc4", desc: "頭の高さから3つの音を重ねる", opts: ["grand", "organ", "strings", "harp"] },
-  { key: "high", label: "4人目・高い旋律", color: "#8be38b", desc: "1オクターブ上で、きらきら飾る", opts: ["glock", "xylo", "pizz", "grand"] },
-  { key: "perc", label: "5人目・打楽器", color: "#c9a2ff", desc: "頭の高さで打楽器の種類が変わる", opts: ["perc:latin", "perc:wood", "perc:small"] },
-];
 
 // ---------- 画面 ----------
+const SECTIONS = [
+  { key: "style", label: "曲の雰囲気", desc: "テンポとリズムの型", cls: "style", opts: Object.keys(STYLES).map(k => [k, STYLES[k].name, STYLES[k].note]) },
+  { key: "drums", label: "伴奏のドラム", color: "#9aa0ad", desc: "ずっと鳴っている伴奏", toggle: true, opts: Object.keys(DRUMS).map(k => [k, DRUMS[k].name, DRUMS[k].note]) },
+  { key: "lead", label: "1人目・旋律", color: "#ffcf5a", desc: "頭の高さがそのまま音の高さ。曲の顔", toggle: true, opts: ["grand", "pluck", "lead", "upright", "marimba", "harp"] },
+  { key: "bass", label: "2人目・ベース", color: "#5ad1ff", desc: "低い音で曲を支える", toggle: true, opts: ["ebass", "synbass", "sneaky"], octave: true },
+  { key: "pad", label: "3人目・和音", color: "#ff8fc4", desc: "頭の高さから3つの音を重ねる", toggle: true, opts: ["synpad", "guitar", "grand", "strings", "organ", "harp"] },
+  { key: "high", label: "4人目・高い旋律", color: "#8be38b", desc: "1オクターブ上で、きらきら飾る", toggle: true, opts: ["bell", "glock", "pluck", "xylo", "pizz", "grand"] },
+  { key: "perc", label: "5人目・打楽器", color: "#c9a2ff", desc: "頭の高さで打楽器の種類が変わる", toggle: true, opts: Object.keys(PERC_KITS).map(k => [k, PERC_KITS[k].name, PERC_KITS[k].note]) },
+];
 const rolesEl = document.getElementById("roles");
-for (const r of ROLES) {
-  const sec = document.createElement("section"); sec.className = "card";
+for (const r of SECTIONS) {
+  const sec = document.createElement("section"); sec.className = "card" + (r.cls ? " " + r.cls : "");
   const opts = r.opts.map((o, i) => {
-    let name, note;
-    if (o.startsWith("perc:")) { const k = PERC_KITS[o.slice(5)]; name = k.name; note = k.note; }
-    else if (o.startsWith("sneaky:")) { name = o.endsWith(":0") ? "ふつうの高さ（低め）" : "1オクターブ上"; note = o.endsWith(":0") ? "録音どおりの高さ。コントラバスらしい低さ" : "前の聞き比べの初期設定と同じ高さ"; }
-    else { name = INST[o].name; note = INST[o].note; }
-    return `<label><input type="radio" name="${r.key}" value="${o}"${i === 0 ? " checked" : ""}> ${name}<small>${note}</small></label>`;
+    const [val, name, note] = Array.isArray(o) ? o : [o, INST[o].name, INST[o].note];
+    return `<label><input type="radio" name="${r.key}" value="${val}"${i === 0 ? " checked" : ""}> ${name}<small>${note}</small></label>`;
   }).join("");
-  sec.innerHTML = `<h2><span class="sw" style="background:${r.color}"></span>${r.label}<label><input type="checkbox" data-on="${r.key}" checked> 鳴らす</label></h2><p class="role">${r.desc}</p><div class="opts">${opts}</div>`;
+  const sw = r.color ? `<span class="sw" style="background:${r.color}"></span>` : "";
+  const tg = r.toggle ? `<label><input type="checkbox" data-on="${r.key}" checked> 鳴らす</label>` : "";
+  const oct = r.octave ? `<div class="sub"><span>ベースの高さ:</span><label><input type="radio" name="bassOct" value="0" checked> ふつう</label><label><input type="radio" name="bassOct" value="-12"> 1オクターブ下（重く低く）</label></div>` : "";
+  sec.innerHTML = `<h2>${sw}${r.label}${tg}</h2><p class="role">${r.desc}</p><div class="opts">${opts}</div>${oct}`;
   rolesEl.appendChild(sec);
 }
 
 // ---------- 音 ----------
-let master, comp, verb, drumKit;
-const samplers = {}, percKits = {};
+let master;
+const instCache = {}, drumCache = {}, percCache = {};
+let machine = null;
 async function buildCommon() {
   if (master) return;
   master = new Tone.Gain(0.8).toDestination();
-  comp = new Tone.Compressor(-18, 3).connect(master);
-  verb = new Tone.Reverb({ decay: 2.4, wet: 0.22 }).connect(comp);
-  const m = "room";
-  drumKit = new Tone.Players({
-    kick: `${VD}${m}/kick/${m}_kick_snoff_vl3_rr1.flac`, snare: `${VD}${m}/snare/${m}_snare_center_vl24.flac`,
-    hat1: `${VD}${m}/hh/${m}_hh_closed_vl3_rr1.flac`, hat2: `${VD}${m}/hh/${m}_hh_closed_vl3_rr2.flac`,
-    hat3: `${VD}${m}/hh/${m}_hh_closed_vl2_rr3.flac`, hat4: `${VD}${m}/hh/${m}_hh_closed_vl2_rr4.flac`,
-    open: `${VD}${m}/hh/${m}_hh_open_vl3_rr1.flac`, crash: `${VD}${m}/crash/${m}_crash_crash_vl2_rr1.flac`,
-  }).connect(comp);
-  drumKit.volume.value = -4;
+  const comp = new Tone.Compressor(-16, 4).connect(master);
+  const verb = new Tone.Reverb({ decay: 2.0, wet: 0.2 }).connect(comp);
+  const delay = new Tone.FeedbackDelay("8n.", 0.25).connect(verb); delay.wet.value = 0.25;
+  const chorus = new Tone.Chorus(2, 2.5, 0.5).connect(verb).start();
+  const padFilter = new Tone.Filter(1800, "lowpass").connect(chorus);
+  const dist = new Tone.Distortion(0.6).connect(new Tone.Filter(3200, "lowpass").connect(comp));
+  fx = { comp, verb, delay, chorus, padFilter, dist };
+  machine = {
+    kick: new Tone.MembraneSynth({ pitchDecay: 0.03, octaves: 7, envelope: { attack: 0.001, decay: 0.35, sustain: 0 } }).connect(comp),
+    clap: new Tone.NoiseSynth({ envelope: { attack: 0.001, decay: 0.15, sustain: 0 } }).connect(new Tone.Filter(1400, "bandpass").connect(verb)),
+    hat: new Tone.NoiseSynth({ envelope: { attack: 0.001, decay: 0.035, sustain: 0 } }).connect(new Tone.Filter(9000, "highpass").connect(comp)),
+    open: new Tone.NoiseSynth({ envelope: { attack: 0.001, decay: 0.16, sustain: 0 } }).connect(new Tone.Filter(8000, "highpass").connect(comp)),
+    crash: new Tone.NoiseSynth({ envelope: { attack: 0.001, decay: 1.2, sustain: 0 } }).connect(new Tone.Filter(5000, "highpass").connect(verb)),
+  };
+  machine.kick.volume.value = 0; machine.clap.volume.value = -4; machine.hat.volume.value = -16; machine.open.volume.value = -18; machine.crash.volume.value = -22;
   await verb.ready;
 }
-function sampler(id) {
-  if (samplers[id]) return samplers[id];
-  const def = INST[id];
-  const s = new Tone.Sampler({ urls: def.map(), release: def.release }).connect(verb);
-  s.volume.value = def.vol;
-  return (samplers[id] = s);
+function inst(id) {
+  if (instCache[id]) return instCache[id];
+  let s;
+  if (SYNTH[id]) s = SYNTH[id].make();
+  else { const d = SAMPLED[id]; s = new Tone.Sampler({ urls: d.map(), release: d.release }).connect(fx.verb); s.volume.value = d.vol; }
+  return (instCache[id] = s);
+}
+function drumKit(id) {
+  if (id === "machine") return null;
+  if (drumCache[id]) return drumCache[id];
+  const k = new Tone.Players(vdKit(id)).connect(fx.comp); k.volume.value = -2;
+  return (drumCache[id] = k);
 }
 function percKit(id) {
-  if (percKits[id]) return percKits[id];
-  const u = {}; for (const [k, f] of Object.entries(PERC_KITS[id].files)) u[k] = VD + "perc/" + f;
-  for (const k of ["a", "b"]) if (PERC_KITS[id].files[k].startsWith("room/ltom") || PERC_KITS[id].files[k].startsWith("room/htom")) u[k] = VD + PERC_KITS[id].files[k];
-  const p = new Tone.Players(u).connect(verb); p.volume.value = -4;
-  return (percKits[id] = p);
+  if (percCache[id]) return percCache[id];
+  const u = {}; for (const [k, f] of Object.entries(PERC_KITS[id].files)) u[k] = VD + f;
+  const p = new Tone.Players(u).connect(fx.verb); p.volume.value = -4;
+  return (percCache[id] = p);
 }
 
-function score(on) {
+// ---------- 譜面 ----------
+function score(on, style) {
   const ev = [];
   for (let s = 0; s < STEPS; s++) {
-    const bar = Math.floor(s / 8), b = s % 8;
+    const bar = Math.floor(s / 8), b = s % 8, root = ROOTS[bar];
     if (on.drums) {
       if (s === 0) ev.push({ s, k: "crash" });
-      if (b === 0 || b === 4 || (b === 7 && bar % 2 === 1)) ev.push({ s, k: "kick" });
-      if (b === 2 || b === 6) ev.push({ s, k: "snare" });
-      if (s === 31) ev.push({ s, k: "open" }); else if (s !== 0) ev.push({ s, k: "hat", n: s % 4 });
+      if (style === "pop") {
+        if (b % 2 === 0) ev.push({ s, k: "kick" });
+        if (b === 2 || b === 6) ev.push({ s, k: "snare" });
+        if (b % 2 === 1) ev.push({ s, k: "open" }); else if (s !== 0) ev.push({ s, k: "hat", n: 0 });
+      } else if (style === "rock") {
+        if (b === 0 || b === 3 || b === 4 || (b === 5 && bar % 2 === 1)) ev.push({ s, k: "kick" });
+        if (b === 2 || b === 6) ev.push({ s, k: "snare" });
+        if (s !== 0) ev.push({ s, k: "hat", n: b % 2 });
+        if (s === 31) ev.push({ s, k: "snare" });
+      } else {
+        if (b === 0 || b === 4 || (b === 7 && bar % 2 === 1)) ev.push({ s, k: "kick" });
+        if (b === 2 || b === 6) ev.push({ s, k: "snare" });
+        if (s === 31) ev.push({ s, k: "open" }); else if (s !== 0) ev.push({ s, k: "hat", n: s % 2 });
+      }
     }
-    if (on.bass && s % 2 === 0) ev.push({ s, k: "bass", m: ROOTS[bar] + (b % 4 === 2 ? 12 : 0) });
+    if (on.bass) {
+      if (style === "pop") ev.push({ s, k: "bass", m: root - 12 + (b % 2 ? 12 : 0), len: 0.8 });
+      else if (style === "rock") ev.push({ s, k: "bass", m: root - 12, len: 0.9 });
+      else if (s % 2 === 0) ev.push({ s, k: "bass", m: root + (b % 4 === 2 ? 12 : 0), len: 1.8 });
+    }
     if (on.lead && LEAD[s] !== null) ev.push({ s, k: "lead", m: SCALE[LEAD[s]] });
-    if (on.pad && (b === 0 || b === 4)) ev.push({ s, k: "pad", ms: CHORDS[bar] });
+    if (on.pad) {
+      if (style === "rock") { if (b === 0 || b === 3 || b === 4 || b === 6) ev.push({ s, k: "pad", ms: CHORDS[bar], len: b === 3 ? 0.9 : 1.8 }); }
+      else if (style === "pop") { if (b === 0 || b === 3 || b === 6) ev.push({ s, k: "pad", ms: CHORDS[bar], len: b === 0 ? 2.8 : 1.8 }); }
+      else if (b === 0 || b === 4) ev.push({ s, k: "pad", ms: CHORDS[bar], len: 3.6 });
+    }
     if (on.high && HIGH[s] !== undefined) ev.push({ s, k: "high", m: SCALE[HIGH[s]] + 12 });
     if (on.perc && PERC[s] !== null) ev.push({ s, k: "perc", i: PERC[s] });
   }
   return ev;
 }
 
+// ---------- 再生 ----------
 let timer = null;
 window.__debug = { played: [], errors: [] };
 const statusEl = document.getElementById("status");
 function stop() {
   clearInterval(timer); timer = null;
-  try { Object.values(samplers).forEach(s => s.releaseAll()); [drumKit, ...Object.values(percKits)].forEach(k => k && k.stopAll()); } catch (e) {}
+  try { Object.values(instCache).forEach(s => s.releaseAll ? s.releaseAll() : s.triggerRelease()); [...Object.values(drumCache), ...Object.values(percCache)].forEach(k => k.stopAll()); } catch (e) {}
   beatCells.forEach(c => c.classList.remove("on"));
 }
 async function play() {
   await Tone.start(); stop(); await buildCommon();
   const pick = k => document.querySelector(`input[name=${k}]:checked`).value;
-  const on = { drums: document.getElementById("drums").checked };
-  document.querySelectorAll("[data-on]").forEach(c => on[c.dataset.on] = c.checked);
-  const leadS = sampler(pick("lead")), padS = sampler(pick("pad")), highS = sampler(pick("high")), bassS = sampler("sneaky");
-  const bassUp = Number(pick("bass").split(":")[1]);
-  const kit = percKit(pick("perc").slice(5));
+  const style = pick("style"), STEP = 60 / STYLES[style].bpm / 2;
+  const on = {}; document.querySelectorAll("[data-on]").forEach(c => on[c.dataset.on] = c.checked);
+  const leadS = inst(pick("lead")), padS = inst(pick("pad")), highS = inst(pick("high"));
+  const bassId = pick("bass"), bassS = inst(bassId), oct = Number(pick("bassOct"));
+  const drumId = pick("drums"), kit = drumKit(drumId), pk = percKit(pick("perc"));
+  // 4人目と1人目が同じ合成楽器を選んだとき用に、高い旋律は別の音源にする
+  const highSrc = pick("high") === pick("lead") && SYNTH[pick("high")] ? SYNTH[pick("high")].make() : highS;
   statusEl.textContent = "素材を読み込み中…";
   try { await Tone.loaded(); } catch (e) { statusEl.textContent = "読み込みに失敗: " + e.message; window.__debug.errors.push(String(e)); return; }
   statusEl.textContent = "";
   const hit = (p, name, t, vol = 0) => { const pl = p.player(name); pl.volume.value = vol; pl.start(t); };
-  const H = ["hat1", "hat3", "hat2", "hat4"];
+  const H = ["hat1", "hat3", "hat2", "hat4"]; let hc = 0;
+  const mono = id => !!SYNTH[id] && id === "synbass";
   const fn = {
-    crash: t => hit(drumKit, "crash", t, -6), kick: t => hit(drumKit, "kick", t), snare: t => hit(drumKit, "snare", t, -2),
-    hat: (t, e) => hit(drumKit, H[e.n], t, e.n % 2 ? -10 : -6), open: t => hit(drumKit, "open", t, -6),
-    bass: (t, e) => bassS.triggerAttackRelease(mtof(e.m + bassUp), STEP * 1.8, t, 0.9),
+    crash: t => kit ? hit(kit, "crash", t, -8) : machine.crash.triggerAttackRelease(1.2, t),
+    kick: t => kit ? hit(kit, "kick", t) : machine.kick.triggerAttackRelease("C1", 0.3, t),
+    snare: t => kit ? hit(kit, "snare", t, -1) : machine.clap.triggerAttackRelease(0.15, t),
+    hat: (t, e) => kit ? hit(kit, H[hc++ % 4], t, e.n ? -11 : -7) : machine.hat.triggerAttackRelease(0.035, t, e.n ? 0.6 : 1),
+    open: t => kit ? hit(kit, "open", t, -9) : machine.open.triggerAttackRelease(0.16, t),
+    bass: (t, e) => { const f = mtof(e.m + oct), d = STEP * e.len; mono(bassId) ? bassS.triggerAttackRelease(f, d, t) : bassS.triggerAttackRelease(f, d, t, 0.9); },
     lead: (t, e) => leadS.triggerAttackRelease(mtof(e.m), STEP * 1.2, t, 0.8),
-    pad: (t, e) => padS.triggerAttackRelease(e.ms.map(m => mtof(m - 12)), STEP * 3.6, t, 0.5),
-    high: (t, e) => highS.triggerAttackRelease(mtof(e.m), 0.5, t, 0.6),
-    perc: (t, e) => { const k = e.i <= 2 ? "a" : e.i <= 5 ? "b" : e.i <= 8 ? (e.i === 8 ? "c2" : "c") : "d"; hit(kit, k, t, k === "d" ? -6 : 0); },
+    pad: (t, e) => { const ms = pick("pad") === "guitar" ? [e.ms[0] - 12, e.ms[0] - 5, e.ms[0]] : e.ms.map(m => m - 12); padS.triggerAttackRelease(ms.map(mtof), STEP * (e.len || 3.6), t, 0.5); },
+    high: (t, e) => highSrc.triggerAttackRelease(mtof(e.m), 0.5, t, 0.6),
+    perc: (t, e) => {
+      const k = e.i <= 2 ? "a" : e.i <= 5 ? "b" : e.i <= 8 ? (e.i === 8 ? "c2" : "c") : "d";
+      if (pick("perc") === "clap" && (k === "a" || k.startsWith("c"))) { machine.clap.triggerAttackRelease(0.12, t, k === "a" ? 1 : 0.7); return; }
+      hit(pk, k, t, k === "d" ? -6 : 0);
+    },
   };
   const startAt = Tone.now() + 0.2, all = [];
-  const ev = score(on);
+  const ev = score(on, style);
   for (let l = 0; l < LOOPS; l++) ev.forEach(e => all.push({ e, t: startAt + (l * STEPS + e.s) * STEP }));
   all.sort((x, y) => x.t - y.t);
   let idx = 0;
-  window.__debug.played.push(["lead", "bass", "pad", "high", "perc"].map(pick).join(","));
+  window.__debug.played.push(["style", "drums", "lead", "bass", "pad", "high", "perc"].map(pick).join(","));
   const total = LOOPS * STEPS * STEP;
   timer = setInterval(() => {
     while (idx < all.length && all[idx].t < Tone.now() + 0.15) {
