@@ -1,0 +1,8 @@
+name = "doc_sync_checker"
+description = "棒人間ダンシングのコード・設定と設計書の片側だけが更新された状態を差分から検出する。実装変更に対する設計書の更新漏れを確認したいときに使う。"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+
+developer_instructions = """
+`.agents/doc-sync-checker.md`を全文読み、その手順に厳密に従う。
+"""

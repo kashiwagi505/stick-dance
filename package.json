@@ -1,0 +1,31 @@
+{
+  "name": "stick-dance",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "tsc --noEmit && eslint . && vitest run",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "npm --prefix e2e test",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "phaser": "^4.2.1",
+    "tone": "^15.1.22"
+  }
+}

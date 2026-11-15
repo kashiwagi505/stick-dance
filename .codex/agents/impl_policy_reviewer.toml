@@ -1,0 +1,8 @@
+name = "impl_policy_reviewer"
+description = "変更されたTypeScriptコード・設定を棒人間ダンシングのアプリケーション実装方針に照らしてレビューする。実装後・PR前の規約確認に使う。"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+
+developer_instructions = """
+`.agents/impl-policy-reviewer.md`を全文読み、その手順に厳密に従う。
+"""

@@ -1,0 +1,139 @@
+name: Claude PR Review
+
+# PR作成時（ドラフト解除時を含む）に1回だけ自動レビューする。push後の再レビューや
+# 追加質問は PRコメントで @claude にメンションする（claude.yml が対応する）。
+#
+# レビューの対象は master 向けのPRだけ（branches: master は base 側の絞り込み）。
+# 作業ブランチ → 個人の統合ブランチ（dev/<名前>）のマージはレビューを通さない運用のため、
+# そこにPRを立てた場合もレビューは走らせない。レビューは統合ブランチ → master のPRで受ける。
+# 正本: ドキュメント/基準書/Git運用手順.md「2. 日々の作業の流れ」④⑥
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+    branches: [master]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+  actions: read
+
+jobs:
+  # secrets は if: で直接参照できないため、ゲートジョブで有無を判定する。
+  # CLAUDE_CODE_OAUTH_TOKEN が未設定のリポジトリではレビュー本体をスキップして即終了する。
+  check-token:
+    runs-on: ubuntu-latest
+    outputs:
+      has_token: ${{ steps.check.outputs.has_token }}
+    steps:
+      - name: Check CLAUDE_CODE_OAUTH_TOKEN
+        id: check
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  review:
+    needs: check-token
+    # ドラフトPRはレビューしない。レビューしてほしくなったら Ready for review にする
+    # （ready_for_review でこのワークフローが動く）か、@claude で依頼する
+    if: needs.check-token.outputs.has_token == 'true' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # 差分をファイル単位・行範囲に切り出して読めるように、master と履歴を取得する。
+          # `gh pr diff` は1回の出力が Bash の上限（約3万文字）で打ち切られるうえ、
+          # ファイル単位に絞る手段（--stat・パス指定）を持たないため git diff を使う。
+          # 履歴は「共通ファイルへの追記が他メンバーの行を消していないか」の確認にも要る。
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          # Claudeサブスクリプション（Team）に紐づくOAuthトークンで認証する
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 進捗をトラッキングコメントで可視化し、結果をPR上へ投稿する
+          track_progress: true
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            まず `.agents/codex-pr-reviewer.md` を全文読み、その「対象」「判定の原則」「手順」
+            「最優先のチェック項目」「PR固有のチェック項目」「出力形式」に厳密に従って
+            このプルリクエストをレビューしてください。要約や記憶で進めず、手順書が指示する
+            設計書・基準書も実際に開いて照合すること。
+
+            続けて、差分にTypeScriptコード（`src/`）・`index.html`・`package.json`・設定ファイル・`.env.example` の変更が含まれる場合は
+            `.agents/impl-policy-reviewer.md` も全文読み、その手順に従って実装方針への
+            準拠もレビューする（差分が設計書・ドキュメントのみの場合はこの段落は省略してよい）。
+
+            ## 差分の読み方
+
+            出力の打ち切りに気づかないまま結論を出すことを防ぐため、次の順で読む。
+
+            - まず `git diff origin/master...HEAD --stat` で変更ファイルと規模を把握する
+            - 本文はファイル単位で `git diff origin/master...HEAD -- <パス>` を使って読む。
+              全ファイルをまとめて取得しない
+            - Bashの出力は約3万文字で打ち切られる。打ち切られたら、より狭い範囲
+              （`sed -n '<開始>,<終了>p'`、`cut -c<開始>-<終了>`）に分割して読み直す。
+              打ち切られた出力のまま判断しない
+            - `ドキュメント/管理表/レビュー指摘表/` のように1行が数千文字あるファイルは、
+              行数が少なくても差分の文字数が巨大になる。チェックアウト済みの実ファイルを
+              Read ツールで開いて照合する（Read は長い行も欠けない）
+            - 必要な差分・設計書を読み切れなかった場合は、どこまで確認できたか、
+              何が読めなかったかをサマリに明記する。無言で終了しない
+
+            ## 報告の仕方
+
+            - 指摘は該当行への行コメント（mcp__github_inline_comment__create_inline_comment）として投稿する
+            - サマリは mcp__github_comment__update_claude_comment で追跡コメントを更新して投稿する。
+              本文は必ず行頭から始まる `### レビュー結果` の見出しで書き出し、作業中の見出しの
+              まま終了しない（この見出しをレビュー完了の目印として後続ステップが検証する）
+            - サマリに要修正／推奨／要確認の件数と、確認した対応関係を書く。指摘ゼロでも明言する
+            - レビューコメントはすべて日本語で書く
+            - コードは修正しない
+          # 差分を分割して読むための読み取り専用コマンドを許可する。パイプは各コマンドが
+          # 個別に判定されるため、`git diff ... | sed -n ...` には両方の許可が要る。
+          # PR head は未信頼として扱う方針なので `Bash(*)` のような全許可にはせず、
+          # 読み取り専用コマンドの列挙に留める。`gh api` は許可判定が接頭辞単位で
+          # `-X POST` 等の書き込みを止められないため入れない（レビューには不要）。
+          # あわせて、actionの既定で許可される git の書き込み系を明示的に禁止し、
+          # 手順書の「コードは修正しない」をプロンプトの指示だけに頼らず担保する。
+          claude_args: |
+            --model sonnet
+            --allowedTools "Task,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(cat:*),Bash(head:*),Bash(tail:*),Bash(sed:*),Bash(cut:*),Bash(wc:*),Bash(grep:*),Bash(ls:*)"
+            --disallowedTools "Bash(git add:*),Bash(git commit:*),Bash(git rm:*)"
+
+      # Claudeが差分を読み切れずに途中終了しても job は success で終わり、PRのチェックは
+      # 緑のままになる。レビュー結果が投稿されたかを機械的に確認し、無言で終わっていれば落とす。
+      - name: レビュー結果が投稿されたことを確認する
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # 対象は「この実行が管理したコメント」だけに絞る。claude[bot] は @claude 対応・
+          # マージ完了でも投稿するため、単に最新のコメントを見ると別の実行の結果を拾う。
+          # action は管理コメントの見出しに actions/runs/<run_id> のジョブリンクを埋める。
+          # --paginate と `// empty` の組み合わせで、該当ページだけが本文を出力する
+          # （--slurp は --jq と併用できないため使わない）。
+          body=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" --paginate \
+            --jq "[.[] | select(.user.login == \"claude[bot]\") | select(.body | contains(\"actions/runs/$GITHUB_RUN_ID\")) | .body] | last // empty")
+          if [ -z "$body" ]; then
+            echo "::error::この実行のClaudeレビューコメントが見つかりません。"
+            exit 1
+          fi
+          # action がコメント冒頭に独自のヘッダ（Claude finished ... / ---）を差し込むため、
+          # 見出しは本文の1行目にはならない。行頭一致で判定する。
+          if printf '%s\n' "$body" | grep -q '^### レビュー結果'; then
+            echo "レビュー結果の投稿を確認しました。"
+          else
+            echo "::error::Claudeレビューが途中で終了しました（サマリ見出し「### レビュー結果」が投稿されていません）。PRコメントで @claude にメンションして再レビューを依頼してください。"
+            exit 1
+          fi

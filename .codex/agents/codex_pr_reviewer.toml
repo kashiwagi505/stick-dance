@@ -1,0 +1,8 @@
+name = "codex_pr_reviewer"
+description = "プルリクエストの差分を設計書間・設計と実装・設計とテストの整合の観点でレビューする。PRのレビューを依頼されたときに使う。"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+
+developer_instructions = """
+`.agents/codex-pr-reviewer.md`を全文読み、その手順に厳密に従う。
+"""

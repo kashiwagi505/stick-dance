@@ -1,0 +1,71 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/session-start.ps1",
+            "timeout": 20,
+            "statusMessage": "並行セッションの確認"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/prompt-log.ps1",
+            "timeout": 20,
+            "statusMessage": "繰り返し指示の記録"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/worktree-guard.ps1",
+            "timeout": 20,
+            "statusMessage": "作業ツリーの分離チェック"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/safe-commit-guard.ps1",
+            "timeout": 20,
+            "statusMessage": "コミット対象の確認"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/ui-change-bug-reminder.ps1",
+            "timeout": 20,
+            "statusMessage": "UI変更のバグ起票チェック"
+          },
+          {
+            "type": "command",
+            "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/session-track.ps1",
+            "timeout": 20,
+            "statusMessage": "セッション登録簿の更新"
+          }
+        ]
+      }
+    ]
+  }
+}

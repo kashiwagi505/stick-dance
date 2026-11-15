@@ -1,0 +1,39 @@
+name: PR Target
+
+# 作業ブランチ（dev/<名前>-<作業名>）から master へ直接PRを出すのは禁止事項。
+# 作業ブランチは個人の統合ブランチ dev/<名前> へマージし、そこから master へPRを出す。
+# コマンド（/create-pr）は正しい手順を踏むが、gh pr create を直接叩くと素通りするためここで落とす。
+# 正本: ドキュメント/基準書/Git運用手順.md「1. ブランチ構成」「7. やってはいけないこと」
+#
+# CI（ci.yml）から分けているのは、向き先を後から直したときに判定をやり直せるようにするため。
+# base の付け替えは pull_request の edited で発火するが、ci.yml に edited を足すと本文・
+# タイトルを直すたびに `npm run check`（型検査＋静的解析＋単体テスト）まで回り直す。判定だけの軽い検査を別の
+# ワークフローに置き、こちらだけ edited でも走らせる。
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+# 同じPRを続けて編集したときは古い実行を打ち切る
+concurrency:
+  group: pr-target-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  target:
+    runs-on: ubuntu-latest
+    steps:
+      # チェックアウトは不要（判定に使うのは head_ref・base_ref だけ）
+      - name: PRの向き先チェック
+        if: github.base_ref == 'master'
+        run: |
+          head="${{ github.head_ref }}"
+          if printf '%s' "$head" | grep -qE '^dev/[^/-]+-.+$'; then
+            base_branch=$(printf '%s' "$head" | sed -E 's|^(dev/[^/-]+)-.*$|\1|')
+            echo "::error::作業ブランチ ($head) から master へ直接PRを出すことはできません。$base_branch へマージしてから、$base_branch → master のPRを出してください（Git運用手順「1. ブランチ構成」）"
+            exit 1
+          fi
+          echo "PRの向き先OK（head=$head → master）"

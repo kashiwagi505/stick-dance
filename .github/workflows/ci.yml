@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+
+# 同じPRに続けてpushしたときは古い実行を打ち切る
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # バグ表の検査で PR の差分（merge-base 以降）を見るため履歴を全部取る
+          fetch-depth: 0
+
+      # PRの向き先チェック（作業ブランチ → master の禁止）は [pr-target.yml](pr-target.yml) にある。
+      # base を後から付け替えたときに判定をやり直すため、edited でも走る別ワークフローにしている。
+
+      # バグの正本はバグ表3章の表（1件1行）。起票は番号を付けずに バグ/未採番/ へ置き、
+      # 採番して表へ転記するのは master 上の bug-table-sync.yml（毎朝）と /bug-sync だけ。
+      # ここでは表と未採番ファイルの書式・ID重複・表の外に落ちた行を検査し、
+      # PR で手に番号を付けて行を足していないかを見る（正本: ドキュメント/04_テスト/02_バグ表.md 2-0・2-1）。
+      # 既存の行の書き換え（対応内容・状態・確認日などの記入）は正当なので落とさない。
+      - name: バグ表の検査
+        run: |
+          node .github/scripts/bug-table.mjs check
+          # 表にあるバグIDを PR の分岐点（merge-base）と比べ、HEAD にだけあるIDを「手で足した行」として落とす。
+          # 採番は master 上でしか行わないため、PR の差分で新しいIDが増えることはない
+          # （master を取り込んだ場合は merge-base がその master へ進むので、転記済みの行は base 側に入る）。
+          # IDは行の1列目からだけ採る。備考は他のバグを参照する（例: BUG-114 の備考が BUG-051 に触れる）ため、
+          # 行全体から BUG-nnn を拾うと参照先まで拾って誤検知になる。
+          table="ドキュメント/04_テスト/02_バグ表.md"
+          git fetch --no-tags origin "${{ github.base_ref }}" >/dev/null 2>&1 || true
+          mb=$(git merge-base HEAD "origin/${{ github.base_ref }}")
+          git show "$mb:$table" 2>/dev/null | sed -nE 's/^\| *(BUG-[0-9]+) *\|.*/\1/p' | sort -u > /tmp/ids-base.txt || true
+          sed -nE 's/^\| *(BUG-[0-9]+) *\|.*/\1/p' "$table" | sort -u > /tmp/ids-head.txt
+          added=$(comm -13 /tmp/ids-base.txt /tmp/ids-head.txt | tr '\n' ' ')
+          if [ -n "$(printf '%s' "$added" | tr -d ' ')" ]; then
+            echo "::error::バグ表3章へ手で行を足しています: $added。起票は /bug-new で バグ/未採番/ にファイルを置き、採番と転記は master 上の /bug-sync（または毎朝の Actions）に任せてください"
+            exit 1
+          fi
+          echo "バグ表の検査OK（$(wc -l < /tmp/ids-head.txt) 件。追加された行: なし）"
+
+      # レビュー指摘の正本は ドキュメント/管理表/レビュー指摘表.md の1表だけ。指摘IDは REV-nnn の通し番号で、
+      # 並行ブランチで同じ番号を付けたときは後から取り込む側が振り直す決まりなので、形式の誤りと重複をここで落とす。
+      # （正本: ドキュメント/管理表/AGENTS.md）。
+      - name: レビュー指摘表の検査
+        run: node .github/scripts/review-table.mjs check
+
+      # 型検査・静的解析・単体テスト（npm run check）。E2E はブラウザの起動と音の扱いが要るためローカルで回す（テスト方針4-5）
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: npm
+
+      - run: npm ci
+
+      - name: check (typecheck + lint + test)
+        run: npm run check

@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>棒人間ダンス 試作</title>
+<style>
+  :root { --bg:#14161c; --fg:#e8e8ee; --dim:#7a7f8c; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg);
+    font-family: system-ui, "Yu Gothic UI", "Hiragino Sans", sans-serif; overflow:hidden; }
+  canvas { display:block; }
+  #hud { position:fixed; left:16px; top:12px; font-size:13px; line-height:1.7; color:var(--dim); pointer-events:none; }
+  #hud b { color:var(--fg); }
+  #start { position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,11,15,.85); flex-direction:column; gap:12px; cursor:pointer; }
+  #start h1 { margin:0; font-size:22px; }
+  #start p { margin:0; color:var(--dim); font-size:14px; text-align:center; line-height:1.8; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <b>左手</b> W A S D ／ <b>右手</b> ↑ ← ↓ →　（押している間、その向きに引っ張る）　頭の高さ → 音の高さ<br>
+  <b>Enter</b> 鑑賞へ　<b>Backspace</b> 最後の1人を消す　<b>R</b> 最初から　<b>Space</b> 一時停止<br>
+  <b>1〜5</b> 楽器を選ぶ（選ばなければ順番どおり）<br>
+  <b>H</b> 横の効き方（旋律のとき）: <span id="side"></span>　<b>B</b> ベース: <span id="bass"></span>　<b>P</b> 引く強さ: <span id="pull"></span>
+</div>
+<div id="start">
+  <h1>クリックで開始</h1>
+  <p>4小節（約10秒）のループが回ります。キーで棒人間の手を引っ張って踊ってください。<br>
+  1周のあいだに4音以上鳴らすと、その踊りが分身として残り、次の周から隣で繰り返します。<br>
+  1〜5 キーで、その人の楽器（旋律・ベース・和音・高い旋律・打楽器）を選べます。選ばなければ順番どおりです。<br>
+  5人そろうか Enter を押すと、全員の踊りと曲を見る「鑑賞」になります。</p>
+</div>
+<script>
+"use strict";
+// ---------- 設定 ----------
+const BPM = 100;
+const STEP = 60 / BPM / 2;           // 8分音符の長さ（秒）
+const LOOP_STEPS = 32;               // 4小節
+const LOOP_SEC = STEP * LOOP_STEPS;  // 約9.6秒
+const SCALE = [57, 60, 62, 64, 67, 69, 72, 74, 76, 79, 81]; // A マイナーペンタ（MIDI）
+const NAMES = ["ラ","ド","レ","ミ","ソ","ラ","ド","レ","ミ","ソ","ラ"];
+const CHORDS = [45, 41, 36, 43];     // A F C G（ベースの根音、1小節ずつ）
+const MOVE_THRESHOLD = 5;            // 1拍の間に頭がこれ以上動いたら鳴らす（px）
+const KEEP_MIN_NOTES = 4;            // 1周でこれ以上鳴らしたら分身として残す
+const MAX_LAYERS = 5;
+const GHOST_VOL = 0.55;              // 分身の音量（今の自分の音を聞こえやすくする）
+const PULLS = [0.8, 1.3, 2.0];
+// 楽器。人ごとに1つ。踊っている間からこの音で鳴る
+const INSTR = [
+  { name: "旋律", color: "#ffcf5a" },
+  { name: "ベース", color: "#5ad1ff" },
+  { name: "和音", color: "#ff8fc4" },
+  { name: "高い旋律", color: "#8be38b" },
+  { name: "打楽器", color: "#c9a2ff" },
+];
+// 打楽器は、頭の高さで種類が変わる（低い→太鼓、真ん中→手拍子、高い→シンバル、いちばん上→カウベル）
+const percOf = i => i <= 2 ? "tom" : i <= 5 ? "clap" : i <= 8 ? "hat" : "bell";
+const PERC_NAMES = { tom: "太鼓", clap: "手拍子", hat: "シンバル", bell: "カウベル" };
+
+const state = { instr: 0, bass: true, pull: 2, side: 0, paused: false, started: false,
+  phase: "record", // record | toView | view | end
+  viewLoop: 0 };
+const SIDES = ["音色（左＝やわらか／右＝きらきら）", "ハモり（傾くほど和音）", "左右に聞こえるだけ"];
+const ZONE = 40;
+window.__debug = { notes: 0, steps: 0, lastNote: null, layers: 0 };
+
+// ---------- 画面 ----------
+const cv = document.getElementById("c");
+const ctx = cv.getContext("2d");
+let W = 0, H = 0, baseX = 0, baseY = 0;
+function resize() {
+  W = cv.width = innerWidth; H = cv.height = innerHeight;
+  baseX = W * 0.5; baseY = H * 0.8;
+}
+addEventListener("resize", () => { resize(); resetFigure(); });
+
+// ---------- 棒人間（Verlet 物理） ----------
+const DEF = {
+  head:   { rest: [0, -250], k: 0.008 },
+  neck:   { rest: [0, -212], k: 0.008 },
+  pelvis: { rest: [0, -120], k: 0.012 },
+  lElbow: { rest: [-42, -172], k: 0.01 },
+  lHand:  { rest: [-70, -132], k: 0.012 },
+  rElbow: { rest: [42, -172], k: 0.01 },
+  rHand:  { rest: [70, -132], k: 0.012 },
+  lKnee:  { rest: [-20, -60], k: 0.02 },
+  lFoot:  { rest: [-26, 0], k: 0.05 },
+  rKnee:  { rest: [20, -60], k: 0.02 },
+  rFoot:  { rest: [26, 0], k: 0.05 },
+};
+const NODES = Object.keys(DEF);
+const STICKS = [
+  ["head","neck"],["neck","pelvis"],
+  ["neck","lElbow"],["lElbow","lHand"],["neck","rElbow"],["rElbow","rHand"],
+  ["pelvis","lKnee"],["lKnee","lFoot"],["pelvis","rKnee"],["rKnee","rFoot"],
+];
+const SOFT = [["head","pelvis", 0.15]];
+let P = {}, LEN = [];
+function resetFigure() {
+  P = {};
+  for (const [n, d] of Object.entries(DEF)) {
+    const x = baseX + d.rest[0], y = baseY + d.rest[1];
+    P[n] = { x, y, ox: x, oy: y, ax: 0, ay: 0 };
+  }
+  LEN = STICKS.map(([a, b]) => Math.hypot(P[a].x - P[b].x, P[a].y - P[b].y));
+  SOFT.forEach(s => s[3] = Math.hypot(P[s[0]].x - P[s[1]].x, P[s[0]].y - P[s[1]].y));
+}
+
+const keys = new Set();
+const KEYMAP = {
+  KeyW: ["lHand", 0, -1], KeyS: ["lHand", 0, 1], KeyA: ["lHand", -1, 0], KeyD: ["lHand", 1, 0],
+  ArrowUp: ["rHand", 0, -1], ArrowDown: ["rHand", 0, 1], ArrowLeft: ["rHand", -1, 0], ArrowRight: ["rHand", 1, 0],
+};
+
+function physics() {
+  const f = PULLS[state.pull];
+  for (const n in P) { P[n].ax = 0; P[n].ay = 0; }
+  for (const code of keys) {
+    const m = KEYMAP[code]; if (!m) continue;
+    P[m[0]].ax += m[1] * f; P[m[0]].ay += m[2] * f;
+    const elbow = m[0] === "lHand" ? "lElbow" : "rElbow";
+    for (const [n, r] of [[elbow, 0.4], ["neck", 0.45], ["head", 0.2], ["pelvis", 0.3]]) {
+      P[n].ax += m[1] * f * r; P[n].ay += m[2] * f * r;
+    }
+  }
+  const squat = Math.max(0, P.pelvis.y - (baseY + DEF.pelvis.rest[1])) * 0.02;
+  P.lKnee.ax -= squat; P.rKnee.ax += squat;
+  for (const [n, d] of Object.entries(DEF)) {
+    const p = P[n];
+    const rx = baseX + d.rest[0], ry = baseY + d.rest[1];
+    const vx = (p.x - p.ox) * 0.93, vy = (p.y - p.oy) * 0.93;
+    p.ox = p.x; p.oy = p.y;
+    p.x += vx + p.ax + (rx - p.x) * d.k;
+    p.y += vy + p.ay + (ry - p.y) * d.k;
+  }
+  for (let it = 0; it < 6; it++) {
+    STICKS.forEach(([a, b], i) => solve(P[a], P[b], LEN[i], 1));
+    SOFT.forEach(([a, b, s, len]) => solve(P[a], P[b], len, s));
+    for (const n in P) if (P[n].y > baseY) P[n].y = baseY;
+  }
+}
+function solve(p, q, len, s) {
+  const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 0.001;
+  const diff = (d - len) / d * 0.5 * s;
+  p.x += dx * diff; p.y += dy * diff;
+  q.x -= dx * diff; q.y -= dy * diff;
+}
+
+// ---------- 頭の位置 → 音 ----------
+const HEAD_UP = 45, HEAD_DOWN = 85;
+function headIndex() {
+  const restY = baseY + DEF.head.rest[1];
+  const t = (restY + HEAD_DOWN - P.head.y) / (HEAD_UP + HEAD_DOWN);
+  return Math.max(0, Math.min(SCALE.length - 1, Math.round(t * (SCALE.length - 1))));
+}
+function headPan() { return Math.max(-1, Math.min(1, (P.head.x - baseX) / 140)); }
+function ladderY(i) {
+  const restY = baseY + DEF.head.rest[1];
+  return restY + HEAD_DOWN - (i / (SCALE.length - 1)) * (HEAD_UP + HEAD_DOWN);
+}
+function sideOffset() { return P.head.x - baseX; }
+function zoneOf(dx) { return dx < -ZONE ? "soft" : dx > ZONE ? "bright" : "normal"; }
+function harmonyOf(i, dx) {
+  const a = Math.abs(dx), out = [];
+  if (a > ZONE) out.push(i + 2);
+  if (a > ZONE * 2.2) out.push(i + 4);
+  return out.filter(n => n < SCALE.length);
+}
+
+// ---------- 音（Web Audio） ----------
+let ac, master, delay, noiseBuf;
+function initAudio() {
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  master = ac.createGain(); master.gain.value = 0.7; master.connect(ac.destination);
+  delay = ac.createDelay(); delay.delayTime.value = STEP * 1.5;
+  const fb = ac.createGain(); fb.gain.value = 0.28;
+  const wet = ac.createGain(); wet.gain.value = 0.3;
+  delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(master);
+  noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+}
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+function env(g, t, peak, a, dec) {
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec);
+}
+function kick(t) {
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+  env(g, t, 0.9, 0.003, 0.22); o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.3);
+}
+function noise(t, hp, peak, dec) {
+  const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  s.buffer = noiseBuf; f.type = "highpass"; f.frequency.value = hp;
+  env(g, t, peak, 0.002, dec); s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + dec + 0.05);
+}
+function snare(t) {
+  noise(t, 1200, 0.35, 0.16);
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = "triangle"; o.frequency.value = 190; env(g, t, 0.25, 0.002, 0.08);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.15);
+}
+function bass(t, midi, vol = 0.22, len = STEP * 1.6) {
+  const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
+  o.type = "sawtooth"; o.frequency.value = mtof(midi);
+  f.type = "lowpass"; f.frequency.value = 500;
+  env(g, t, vol, 0.005, len); o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + len + 0.1);
+}
+const VOICES = {
+  soft:   { parts: [["sine", 1, 1], ["sine", 4, 0.12]], peak: 0.34, dec: 0.6, cut: 1800 },
+  normal: { parts: [["triangle", 1, 1], ["sine", 2, 0.35]], peak: 0.28, dec: 0.35, cut: 6000 },
+  bright: { parts: [["square", 1, 0.35], ["sawtooth", 2, 0.25], ["sine", 4, 0.2]], peak: 0.22, dec: 0.22, cut: 5000 },
+  pad:    { parts: [["sine", 1, 1], ["triangle", 2, 0.2]], peak: 0.16, dec: 1.2, cut: 2500 },
+};
+function lead(t, midi, pan, voice = "normal", vol = 1) {
+  const v = VOICES[voice];
+  const p = ac.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan));
+  const f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = v.cut;
+  const g = ac.createGain(); env(g, t, v.peak * vol, voice === "pad" ? 0.08 : 0.005, v.dec);
+  for (const [type, mul, amp] of v.parts) {
+    const o = ac.createOscillator(), og = ac.createGain();
+    o.type = type; o.frequency.value = mtof(midi) * mul; og.gain.value = amp;
+    o.connect(og); og.connect(f); o.start(t); o.stop(t + v.dec + 0.2);
+  }
+  f.connect(g); g.connect(p); p.connect(master); p.connect(delay);
+}
+
+// 打楽器の音
+function perc(t, i, pan, vol) {
+  const kind = percOf(i);
+  const out = ac.createStereoPanner(); out.pan.value = Math.max(-1, Math.min(1, pan)); out.connect(master);
+  const g = ac.createGain(); g.connect(out);
+  if (kind === "tom") {
+    const o = ac.createOscillator(); const f0 = 110 + i * 35;
+    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 0.55, t + 0.25);
+    env(g, t, 0.6 * vol, 0.003, 0.3); o.connect(g); o.start(t); o.stop(t + 0.4);
+  } else if (kind === "clap") {
+    const f = ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1200 + (i - 3) * 300; f.Q.value = 1.2;
+    f.connect(g);
+    for (const d of [0, 0.012, 0.024]) {
+      const src = ac.createBufferSource(); src.buffer = noiseBuf; src.connect(f); src.start(t + d); src.stop(t + d + 0.2);
+    }
+    env(g, t, 0.5 * vol, 0.002, 0.18);
+  } else if (kind === "hat") {
+    const f = ac.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 6000 + (i - 6) * 1500; f.connect(g);
+    const src = ac.createBufferSource(); src.buffer = noiseBuf; src.connect(f); src.start(t); src.stop(t + 0.4);
+    env(g, t, 0.3 * vol, 0.002, 0.05 + (i - 6) * 0.12);
+  } else {
+    const f = ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 800; f.Q.value = 3; f.connect(g);
+    for (const hz of [540, 800]) { const o = ac.createOscillator(); o.type = "square"; o.frequency.value = hz * (i === 10 ? 1.12 : 1); o.connect(f); o.start(t); o.stop(t + 0.3); }
+    env(g, t, 0.25 * vol, 0.002, 0.22);
+  }
+}
+// 1つの音を鳴らす。note = { i, instr, voice, extra, pan }、layerNo = 何人目か（0始まり）
+function playNote(t, note, layerNo, vol) {
+  const pan = note.pan + (layerNo === 0 ? 0 : layerNo % 2 ? -0.35 : 0.35); // 人ごとに少し左右に散らす
+  switch (note.instr) {
+    case 1: bass(t, SCALE[note.i] - 24, 0.3 * vol, STEP * 1.8); return;
+    case 2: for (const n of [note.i, note.i + 2, note.i + 4]) if (n < SCALE.length) lead(t, SCALE[n] - 12, pan, "pad", vol); return;
+    case 3: lead(t, SCALE[note.i] + 12, pan, "bright", vol * 0.8); return;
+    case 4: perc(t, note.i, pan, vol); return;
+  }
+  lead(t, SCALE[note.i], pan, note.voice, vol);
+  for (const n of note.extra) lead(t, SCALE[n], -pan, "normal", vol * 0.6);
+}
+// 次の人の楽器: まだ誰も使っていない楽器を順番に。全部使っていれば旋律
+function nextInstr() {
+  const used = new Set(layers.map(l => l.instr));
+  for (let k = 0; k < INSTR.length; k++) if (!used.has(k)) return k;
+  return 0;
+}
+
+// ---------- 録音（1周ごと） ----------
+// 1周 = { notes: [32拍ぶん。鳴らさなかった拍は null], frames: [1/60秒ごとの姿勢], count }
+let layers = [];          // 残った分身
+const takes = new Map();  // 周の番号 → その周の記録
+function takeOf(L) {
+  if (!takes.has(L)) takes.set(L, { notes: Array(LOOP_STEPS).fill(null), frames: [], count: 0 });
+  for (const k of takes.keys()) if (k < L - 2) takes.delete(k); // 古い周は捨てる
+  return takes.get(L);
+}
+function poseSnapshot() {
+  return NODES.map(n => [P[n].x - baseX, P[n].y - baseY]);
+}
+
+// ---------- 拍の進行 ----------
+let loopStart = 0, nextTime = 0, step = 0, lastHead = null;
+const events = [];
+function scheduler() {
+  if (!state.started || state.paused || state.phase === "end") return;
+  while (nextTime < ac.currentTime + 0.08) {
+    const s = step % LOOP_STEPS, L = Math.floor(step / LOOP_STEPS);
+    const bar = Math.floor(s / 8);
+    // 周の頭: 前の周を分身として残すか決める。鑑賞の進行もここで
+    if (s === 0 && L > 0) {
+      if (state.phase === "record" || state.phase === "toView") {
+        const prev = takes.get(L - 1);
+        if (prev && prev.count >= KEEP_MIN_NOTES && layers.length < MAX_LAYERS) {
+          // その周でいちばん多く使った楽器を、その人の楽器にする
+          const cnt = {}; prev.notes.forEach(n => { if (n) cnt[n.instr] = (cnt[n.instr] || 0) + 1; });
+          prev.instr = +Object.keys(cnt).sort((x, y) => cnt[y] - cnt[x])[0];
+          layers.push(prev); window.__debug.layers = layers.length;
+          state.instr = nextInstr();
+        }
+        if (state.phase === "toView" || layers.length >= MAX_LAYERS) {
+          if (layers.length) { state.phase = "view"; state.viewLoop = 0; }
+          else state.phase = "record";
+        }
+      } else if (state.phase === "view") {
+        state.viewLoop++;
+        if (state.viewLoop >= layers.length + 2) { state.phase = "end"; hud(); return; }
+      }
+      hud();
+    }
+    // ドラム: 1小節 = 8拍。キックは1・3拍目（＋2小節ごとに裏）、スネアは2・4拍目
+    const b = s % 8;
+    if (b === 0 || b === 4 || (b === 7 && bar % 2 === 1)) kick(nextTime);
+    if (b === 2 || b === 6) snare(nextTime);
+    noise(nextTime, 7000, s % 2 ? 0.06 : 0.11, 0.04);
+    if (state.bass && s % 2 === 0) {
+      const root = CHORDS[bar % CHORDS.length];
+      bass(nextTime, s % 4 === 2 ? root + 12 : root);
+    }
+    // 分身の音
+    const active = activeLayers();
+    active.forEach(k => { const n = layers[k].notes[s]; if (n) playNote(nextTime, n, k, state.phase === "view" ? 0.85 : GHOST_VOL); });
+    // 今の自分の音（鑑賞中は鳴らさない）
+    let played = null, extra = [];
+    const moved = lastHead ? Math.hypot(P.head.x - lastHead.x, P.head.y - lastHead.y) : 0;
+    lastHead = { x: P.head.x, y: P.head.y };
+    if (state.phase !== "view" && moved > MOVE_THRESHOLD) {
+      const i = headIndex(), dx = sideOffset();
+      const note = { i, instr: state.instr, voice: state.side === 0 ? zoneOf(dx) : "normal",
+        extra: state.side === 1 ? harmonyOf(i, dx) : [], pan: headPan() * (state.side === 2 ? 1 : 0.5) };
+      playNote(nextTime, note, layers.length, 1);
+      const take = takeOf(L); take.notes[s] = note; take.count++;
+      played = i; extra = note.extra;
+      window.__debug.notes++; window.__debug.lastNote = NAMES[i];
+    }
+    events.push({ t: nextTime, step: s, loop: L, note: played, extra, x: P.head.x, y: P.head.y,
+      ghostNotes: active.filter(k => layers[k].notes[s]) });
+    window.__debug.steps++;
+    nextTime += STEP; step++;
+  }
+}
+// いま音と姿を出す分身。鑑賞では1人ずつ増やし、全員そろったら2周
+function activeLayers() {
+  const all = layers.map((_, k) => k);
+  if (state.phase !== "view") return all;
+  return all.slice(0, Math.min(layers.length, state.viewLoop + 1));
+}
+
+// ---------- 描画 ----------
+const trail = [];
+let lastBeat = null, recentNote = null;
+const ghostFlash = new Map(); // 分身の番号 → 最後に鳴った時刻
+function loopPhase(now) {
+  const t = Math.max(0, now - loopStart);
+  return { L: Math.floor(t / LOOP_SEC), idx: Math.floor((t % LOOP_SEC) * 60) };
+}
+function ghostPose(layer, idx) {
+  for (let j = idx; j >= Math.max(0, idx - 30); j--) if (layer.frames[j]) return layer.frames[j];
+  for (let j = idx + 1; j < layer.frames.length; j++) if (layer.frames[j]) return layer.frames[j];
+  return null;
+}
+function drawFigure(pts, ox, oy, scale, color, alpha, glow, lw) {
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = "round";
+  const at = n => { const v = pts[NODES.indexOf(n)]; return [ox + v[0] * scale, oy + v[1] * scale]; };
+  for (const [a, b] of STICKS) {
+    if (a === "head") continue;
+    const [x1, y1] = at(a), [x2, y2] = at(b);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  const [hx, hy] = at("head");
+  ctx.fillStyle = glow ? color : "#14161c";
+  ctx.beginPath(); ctx.arc(hx, hy, 20 * scale, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+// 録音中の分身の立ち位置（横に並べる）と、鑑賞中の並び
+function ghostSlot(k, n) {
+  if (state.phase === "view" || state.phase === "end") return { x: W * (k + 1) / (n + 1), s: Math.min(0.85, 2.6 / (n + 1)) };
+  return { x: W * [0.16, 0.84, 0.3, 0.7][k], s: 0.55 };
+}
+
+function draw() {
+  const now = ac ? ac.currentTime : 0;
+  ctx.fillStyle = "#14161c"; ctx.fillRect(0, 0, W, H);
+  const viewing = state.phase === "view" || state.phase === "end";
+
+  // 拍のイベントを取り出す
+  let flash = null;
+  while (events.length && events[0].t <= now) {
+    const e = events.shift(); lastBeat = { s: e.step, t: now };
+    if (e.note !== null) { flash = e; trail.push({ x: e.x, y: e.y, t: now }); }
+    for (const k of e.ghostNotes) ghostFlash.set(k, now);
+  }
+  while (trail.length && now - trail[0].t > 4) trail.shift();
+  if (flash) recentNote = { n: flash.note, extra: flash.extra, t: now };
+
+  // 横の区切り（録音中だけ）
+  if (!viewing && state.side !== 2 && state.instr === 0) {
+    const zone = zoneOf(sideOffset());
+    const labels = state.side === 0 ? ["やわらか", "ふつう", "きらきら"] : ["ハモり", "1音", "ハモり"];
+    const xs = [[baseX - 160, baseX - ZONE], [baseX - ZONE, baseX + ZONE], [baseX + ZONE, baseX + 160]];
+    ["soft", "normal", "bright"].forEach((z, k) => {
+      const on = z === zone;
+      if (on) {
+        ctx.fillStyle = k === 0 ? "rgba(120,160,255,.10)" : k === 2 ? "rgba(255,207,90,.10)" : "rgba(255,255,255,.04)";
+        ctx.fillRect(xs[k][0], 120, xs[k][1] - xs[k][0], baseY - 120);
+      }
+      ctx.fillStyle = on ? "#e8e8ee" : "#4a5060"; ctx.font = "13px system-ui, sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(labels[k], (xs[k][0] + xs[k][1]) / 2, baseY + 24);
+    });
+  }
+  // 床
+  ctx.strokeStyle = "#2a2e38"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, baseY + 2); ctx.lineTo(W, baseY + 2); ctx.stroke();
+
+  // 分身
+  const { L, idx } = loopPhase(now);
+  const act = new Set(activeLayers());
+  layers.forEach((layer, k) => {
+    if (viewing && !act.has(k)) return;
+    const pose = ghostPose(layer, idx); if (!pose) return;
+    const slot = ghostSlot(k, layers.length);
+    const glow = ghostFlash.has(k) && now - ghostFlash.get(k) < 0.15;
+    const col = INSTR[layer.instr].color;
+    drawFigure(pose, slot.x, baseY, slot.s, col, viewing ? 1 : 0.6, glow, viewing ? 6 : 5);
+    ctx.fillStyle = col; ctx.globalAlpha = viewing ? 0.9 : 0.6;
+    ctx.font = "12px system-ui, sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(`${k + 1}人目・${INSTR[layer.instr].name}`, slot.x, baseY + 44);
+    ctx.globalAlpha = 1;
+  });
+
+  // 今の自分の姿勢を記録する（周の中の位置ごと）
+  if (state.started && !state.paused && !viewing) takeOf(L).frames[idx] = poseSnapshot();
+
+  if (!viewing) {
+    // 音階のはしご
+    const lx = baseX + 175, cur = headIndex();
+    ctx.font = "12px system-ui, sans-serif"; ctx.textAlign = "left";
+    for (let i = 0; i < SCALE.length; i++) {
+      const y = ladderY(i);
+      const hot = recentNote && (recentNote.n === i || recentNote.extra.includes(i)) && now - recentNote.t < 0.25;
+      ctx.fillStyle = hot ? "#ffcf5a" : i === cur ? "#5ad1ff" : "#3a3f4c";
+      ctx.fillRect(lx, y - 2, hot ? 36 : 24, 4);
+      ctx.fillStyle = hot ? "#ffcf5a" : i === cur ? "#e8e8ee" : "#5a6070";
+      ctx.fillText(state.instr === 4 ? PERC_NAMES[percOf(i)] : NAMES[i], lx + 42, y + 4);
+    }
+    // 通り道の点
+    for (const d of trail) {
+      ctx.fillStyle = `rgba(255,255,255,${(1 - (now - d.t) / 4) * 0.5})`;
+      ctx.beginPath(); ctx.arc(d.x, d.y, 4, 0, Math.PI * 2); ctx.fill();
+    }
+    // 今の自分（これから残る色で描く）
+    const myColor = INSTR[state.instr].color;
+    const glow = recentNote && now - recentNote.t < 0.15;
+    drawFigure(poseSnapshot(), baseX, baseY, 1, myColor, 1, glow, 7);
+    ctx.strokeStyle = "#e8e8ee"; ctx.lineWidth = 3;
+    for (const code of keys) {
+      const m = KEYMAP[code]; if (!m) continue;
+      const p = P[m[0]];
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + m[1] * 40, p.y + m[2] * 40); ctx.stroke();
+    }
+  }
+
+  // 楽器の並び（録音中）。いま選んでいる楽器を明るく
+  if (!viewing) {
+    ctx.font = "13px system-ui, sans-serif"; ctx.textAlign = "center";
+    const cw = Math.min(110, (W - 40) / INSTR.length);
+    INSTR.forEach((it, k) => {
+      const x = W / 2 + (k - 2) * cw, on = k === state.instr;
+      const usedBy = layers.filter(l => l.instr === k).length;
+      ctx.globalAlpha = on ? 1 : 0.45;
+      ctx.fillStyle = it.color; ctx.fillRect(x - cw / 2 + 6, 128, cw - 12, on ? 4 : 2);
+      ctx.fillText(`${k + 1} ${it.name}${usedBy ? " ✓" : ""}`, x, 148);
+      ctx.globalAlpha = 1;
+    });
+  }
+  // 上の案内
+  ctx.textAlign = "center"; ctx.font = "16px system-ui, sans-serif"; ctx.fillStyle = "#e8e8ee";
+  let msg = "";
+  if (!state.started) msg = "";
+  else if (state.phase === "record") {
+    const c = takes.get(L) ? takes.get(L).count : 0;
+    msg = `${layers.length + 1}人目を踊っています — この周 ${c} 音` + (c >= KEEP_MIN_NOTES ? "（周の終わりに残ります）" : `（${KEEP_MIN_NOTES}音で残ります）`);
+  } else if (state.phase === "toView") msg = "この周が終わったら鑑賞に入ります";
+  else if (state.phase === "view") msg = `鑑賞中 — ${Math.min(layers.length, state.viewLoop + 1)} / ${layers.length} 人`;
+  else msg = "おわり — R でもう一度";
+  ctx.fillText(msg, W / 2, H - 46);
+
+  // 周の進み（下）: 4小節 × 8拍
+  const bw = Math.min(16, (W - 80) / 36), gap = 3;
+  const total = LOOP_STEPS * (bw + gap) + 3 * 8;
+  let bx = W / 2 - total / 2;
+  for (let i = 0; i < LOOP_STEPS; i++) {
+    if (i && i % 8 === 0) bx += 8;
+    const on = lastBeat && lastBeat.s === i && now - lastBeat.t < STEP;
+    ctx.fillStyle = on ? "#ffcf5a" : i % 4 === 0 ? "#3a3f4c" : "#262a33";
+    ctx.fillRect(bx, H - 30, bw, 8);
+    bx += bw + gap;
+  }
+  if (state.paused) {
+    ctx.fillStyle = "#e8e8ee"; ctx.font = "20px system-ui"; ctx.textAlign = "center";
+    ctx.fillText("一時停止中（Space で再開）", W / 2, H * 0.3);
+  }
+}
+
+function hud() {
+  document.getElementById("bass").textContent = state.bass ? "あり" : "なし";
+  document.getElementById("pull").textContent = ["弱", "中", "強"][state.pull];
+  document.getElementById("side").textContent = SIDES[state.side];
+}
+
+function restart() {
+  layers = []; takes.clear(); events.length = 0; trail.length = 0; ghostFlash.clear();
+  window.__debug.layers = 0;
+  state.phase = "record"; state.viewLoop = 0; state.instr = 0;
+  resetFigure(); lastHead = null;
+  if (ac) { step = 0; loopStart = nextTime = ac.currentTime + 0.1; }
+  hud();
+}
+
+// ---------- 入力 ----------
+addEventListener("keydown", e => {
+  if (KEYMAP[e.code]) { keys.add(e.code); e.preventDefault(); }
+  if (e.repeat) return;
+  const d = /^Digit([1-5])$/.exec(e.code);
+  if (d && state.phase === "record") state.instr = +d[1] - 1;
+  if (e.code === "KeyB") state.bass = !state.bass;
+  if (e.code === "KeyP") state.pull = (state.pull + 1) % PULLS.length;
+  if (e.code === "KeyH") state.side = (state.side + 1) % SIDES.length;
+  if (e.code === "Enter" && state.phase === "record") state.phase = "toView";
+  if (e.code === "Backspace" && state.phase === "record") { layers.pop(); window.__debug.layers = layers.length; e.preventDefault(); }
+  if (e.code === "KeyR" && state.started) restart();
+  if (e.code === "Space" && state.started) {
+    e.preventDefault(); state.paused = !state.paused;
+    if (state.paused) ac.suspend(); else ac.resume();
+  }
+  hud();
+});
+addEventListener("keyup", e => keys.delete(e.code));
+addEventListener("blur", () => keys.clear());
+
+document.getElementById("start").addEventListener("click", () => {
+  initAudio(); ac.resume();
+  state.started = true; restart();
+  document.getElementById("start").style.display = "none";
+  setInterval(scheduler, 20);
+});
+
+// ---------- ループ ----------
+resize(); resetFigure(); hud();
+let acc = 0, last = performance.now();
+function frame(t) {
+  acc += Math.min(100, t - last); last = t;
+  while (acc >= 1000 / 60) { if (!state.paused) physics(); acc -= 1000 / 60; }
+  draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+// 動作確認用
+window.__sim = { keys, state, headIndex, get P() { return P; }, get layers() { return layers; },
+  tick(n) { for (let i = 0; i < n; i++) physics(); }, draw };
+</script>
+</body>
+</html>

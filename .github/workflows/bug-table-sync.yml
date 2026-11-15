@@ -1,0 +1,66 @@
+name: Bug table sync
+
+# バグの正本は バグ表（ドキュメント/04_テスト/02_バグ表.md）3章の表で、1件が1行。
+# 起票（/bug-new）は番号を付けずに バグ/未採番/<担当者>-<日時>.md を作業ブランチへ置き、PR で master に入る。
+# 毎朝1回、master 上でここが 未採番/ のうち対応の終わったもの（状態が 修正済・確認済・取り下げ）に BUG-nnn を
+# 採番して3章の表へ転記し、転記できたファイルを消してコミットする。未対応・対応中 のファイルは据え置く
+# （/bug-sync と同じ処理。採番する場所を master のこの処理と /bug-sync に限り、番号の取り合いを無くす）。
+# すぐに番号を確定したいときはkashiwagiが /bug-sync を手で呼ぶか、Actions からこのワークフローを手動実行する。
+# 正本: ドキュメント/04_テスト/02_バグ表.md 2-0・2-1、ドキュメント/基準書/Git運用手順.md「PRを経ない反映の例外」
+on:
+  schedule:
+    # 毎日 09:00 JST（= 00:00 UTC）。GitHub の schedule は数分〜数十分遅れることがある
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+# 手動実行と定期実行が重なったときは順番に処理する（同時に走って採番が重複しないようにする）
+concurrency:
+  group: bug-table-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: 未採番を採番して表へ転記し、master へ反映する
+        run: |
+          set -eu
+          table="ドキュメント/04_テスト/02_バグ表.md"
+          dir="ドキュメント/04_テスト/バグ"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # push が拒否されたら（この間に master が進んだ）origin/master に合わせて採番からやり直す。2回失敗したら止める
+          for attempt in 1 2; do
+            node .github/scripts/bug-table.mjs check
+            node .github/scripts/bug-table.mjs sync | tee /tmp/sync.log
+            if git diff --quiet -- "$dir" "$table" && [ -z "$(git -c core.quotepath=false status --porcelain -- "$dir")" ]; then
+              echo "転記するものはありません"
+              exit 0
+            fi
+            git add -A -- "$dir" "$table"
+            assigned=$(grep -c '^転記:' /tmp/sync.log || true)
+            git commit -m "バグ表: 未採番 ${assigned} 件を採番して表へ転記する" -m "$(grep '^転記:' /tmp/sync.log || true)"
+            # コミットが バグ/ 配下と表だけであることを確認する（他のパスが混ざっていたら止める）
+            bad=$(git -c core.quotepath=false show --name-only --pretty=format: HEAD | sed '/^$/d' | grep -v -e "^$dir/" -e "^$table\$" || true)
+            if [ -n "$bad" ]; then
+              echo "::error::バグ/ と バグ表 以外のパスがコミットに含まれています: $bad"
+              exit 1
+            fi
+            if git push origin HEAD:master; then
+              echo "反映しました（試行 $attempt）: 未採番 ${assigned} 件"
+              exit 0
+            fi
+            echo "push が拒否されました（試行 $attempt）。origin/master に合わせて採番からやり直します"
+            git fetch --depth=1 origin master
+            git reset --hard origin/master
+          done
+          echo "::error::2回試しても push できませんでした。/bug-sync で手で反映してください"
+          exit 1

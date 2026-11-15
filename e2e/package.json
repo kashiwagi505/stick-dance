@@ -1,0 +1,17 @@
+{
+  "name": "stick-dance-e2e",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.9",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  }
+}

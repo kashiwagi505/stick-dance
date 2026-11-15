@@ -1,0 +1,8 @@
+name = "harness_resolution"
+description = "依頼の1行目が「レビュー指摘」で種別・対象・内容が続くとき、依頼の1行目が「バグ」で対象・期待結果・実際の結果が続くとき、またはharness-resolutionが明示指定されたときに、起票から修正・検証・PR作成までを処理する。顧客レビューはQA表へ案内して停止する。"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+
+developer_instructions = """
+`.agents/harness-resolution.md`を全文読み、その手順に厳密に従う。
+"""

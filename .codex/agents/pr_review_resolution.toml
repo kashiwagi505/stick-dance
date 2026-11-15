@@ -1,0 +1,8 @@
+name = "pr_review_resolution"
+description = "master向けPRのレビュー指摘に対応するときに使う。「PRのレビューを見て対応して」「レビューが返ってきたので直して」のような自然文の依頼や、レビューコメントの本文を貼り付けられた場合に起動する。指摘をインラインコメントとPR全体コメントの両方から集め、1件ずつ仕分けて提示し、対応するかしないかを人に決めてもらったうえで修正・全件返信まで行う。有識者の紙面レビュー指摘とシステムテスト不良はharness_resolutionの担当で対象外。"
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+
+developer_instructions = """
+`.agents/pr-review-resolution.md`を全文読み、その手順に厳密に従う。
+"""

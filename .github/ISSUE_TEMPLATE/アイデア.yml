@@ -1,0 +1,34 @@
+name: アイデア
+description: こうしたらもっと良くなる、という提案。タイトル1行だけで送信してOK
+labels: ["アイデア"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **タイトルだけで送信して構いません。以下はすべて任意です。**
+
+        担当・期日・見積は書きません。やると決まった時点で `WBS/タスク/` のタスクにします。
+        PM・顧客からの要望はここではなく、従来どおり定例で扱います。
+  - type: textarea
+    id: やりたいこと
+    attributes:
+      label: やりたいこと
+      description: 思ったままで構いません。あとから直せます
+      placeholder: 例）商品一覧に「在庫あり」の絞り込みを付けたい
+    validations:
+      required: false
+  - type: textarea
+    id: どう良くなるか
+    attributes:
+      label: どう良くなるか
+      description: 誰が、どう楽になるか。分からなければ空でOK
+      placeholder: 例）買えない商品を開いて戻る往復が減る
+    validations:
+      required: false
+  - type: input
+    id: 関連
+    attributes:
+      label: 関連する画面・機能・ファイル
+      placeholder: 例）SCR02_商品一覧画面
+    validations:
+      required: false

@@ -1,0 +1,34 @@
+name: 課題
+description: 気づいた懸念・引っかかり。タイトル1行だけで送信してOK
+labels: ["課題"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **タイトルだけで送信して構いません。以下はすべて任意です。**
+
+        担当・期日・見積は書きません。やると決まった時点で `WBS/タスク/` のタスクにします。
+        PM・顧客からの指摘はここではなく、従来どおり定例で扱います。
+  - type: textarea
+    id: 気づいたこと
+    attributes:
+      label: 気づいたこと
+      description: 思ったままで構いません。あとから直せます
+      placeholder: 例）注文確定時の在庫の減らし方が、同時アクセスで壊れそうに見える
+    validations:
+      required: false
+  - type: textarea
+    id: このままだと
+    attributes:
+      label: このままだとどうなりそうか
+      description: 分かる範囲で。分からなければ空でOK
+      placeholder: 例）在庫が0未満になって、注文はできたのに商品が無い状態が起きる
+    validations:
+      required: false
+  - type: input
+    id: 関連
+    attributes:
+      label: 関連する画面・機能・ファイル
+      placeholder: 例）SCR05_注文確認画面 / OrderService.java
+    validations:
+      required: false

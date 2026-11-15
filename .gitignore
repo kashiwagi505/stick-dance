@@ -1,0 +1,42 @@
+# Node / Vite
+node_modules/
+dist/
+*.log
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Local configuration
+.env
+
+# Obsidian
+# プラグイン一覧・除外設定・外観は共有し、個人ごとに変わるもの（開いているタブ等）は共有しない
+.obsidian/*
+!.obsidian/app.json
+!.obsidian/appearance.json
+!.obsidian/core-plugins.json
+!.obsidian/community-plugins.json
+!.obsidian/templates.json
+!.obsidian/hotkeys.json
+!.obsidian/plugins/
+
+# E2E (Playwright)
+e2e/node_modules/
+e2e/evidence/
+e2e/evidence-visual-match/
+e2e/playwright-report/
+e2e/test-results/
+
+# Claude
+.claude/launch.json
+# プロンプト記録・セッション作業用（ローカル限定）
+.claude/tmp/
+# 作業ツリー（/worktree-start が作る。リポジトリ配下だが追跡しない）
+.claude/worktrees/
+
+# 作業出力
+# AI画像生成などの一時出力。成果物はリポジトリ内の正規の置き場へ置く
+output/
+
