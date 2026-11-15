@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>音の聞き比べ</title>
+<!-- C・D だけが使う。読み込めなくても A・B は鳴る -->
+<script src="https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js"></script>
+<style>
+  :root { --bg:#14161c; --card:#1d2029; --fg:#e8e8ee; --dim:#8a90a0; --line:#2c303b; --accent:#ffcf5a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family: system-ui, "Yu Gothic UI", "Hiragino Sans", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  p.lead { color: var(--dim); margin: 0 0 18px; line-height: 1.7; font-size: 14px; }
+  .layers { display:flex; flex-wrap:wrap; gap:8px 16px; padding:12px 14px; background:var(--card); border:1px solid var(--line); border-radius:10px; margin-bottom:16px; font-size:14px; }
+  .layers b { margin-right: 6px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .card.playing { border-color: var(--accent); }
+  .card h2 { font-size: 17px; margin: 0 0 4px; }
+  .card .tag { font-size: 12px; color: var(--dim); margin-bottom: 8px; }
+  .card ul { margin: 6px 0 12px; padding-left: 18px; color: var(--dim); font-size: 13px; line-height: 1.7; }
+  button { font: inherit; padding: 8px 18px; border-radius: 8px; border: 1px solid var(--line); background:#2a2f3b; color:var(--fg); cursor:pointer; }
+  button.play { background: var(--accent); color:#1a1a1a; border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .4; cursor: default; }
+  .status { font-size: 12px; color: var(--dim); margin-left: 8px; }
+  .beat { display:flex; gap:3px; margin: 18px 0 0; }
+  .beat span { flex:1; height:6px; background:#262a33; border-radius:2px; }
+  .beat span.on { background: var(--accent); }
+  .beat span.bar { margin-left: 6px; }
+  @media (max-width: 420px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>音の聞き比べ</h1>
+  <p class="lead">同じ4小節（ドラム・ベース・旋律・和音・高い旋律）を、4種類の音で鳴らします。ゲームの分身5人が重なった状態に近い形です。<br>
+  下のチェックで楽器を外すと、1つずつの音色や、重ねたときの濁り方を聞き比べられます。2周くり返して止まります。</p>
+
+  <div class="layers" id="layers">
+    <b>鳴らす楽器:</b>
+    <label><input type="checkbox" data-layer="drums" checked> ドラム</label>
+    <label><input type="checkbox" data-layer="bass" checked> ベース</label>
+    <label><input type="checkbox" data-layer="lead" checked> 旋律</label>
+    <label><input type="checkbox" data-layer="pad" checked> 和音</label>
+    <label><input type="checkbox" data-layer="high" checked> 高い旋律</label>
+  </div>
+
+  <div class="grid">
+    <section class="card" data-engine="A">
+      <h2>A. 今の試作の音</h2>
+      <div class="tag">Web Audio を直接・合成音</div>
+      <ul><li>試作と同じ作り（三角波・のこぎり波・ノイズのドラム・軽いエコー）</li><li>軽い。ゲーム機っぽい電子音</li></ul>
+      <button class="play">再生</button> <button class="stop">止める</button><span class="status"></span>
+    </section>
+    <section class="card" data-engine="B">
+      <h2>B. 合成音を磨いたもの</h2>
+      <div class="tag">Web Audio を直接・合成音（ライブラリなし）</div>
+      <ul><li>響き（リバーブ）・音量の整え（コンプレッサー）を足した</li><li>旋律はつま弾く音、高い旋律はベル、和音はふわっと広がる音</li><li>ライブラリなしでどこまで行けるかの見本</li></ul>
+      <button class="play">再生</button> <button class="stop">止める</button><span class="status"></span>
+    </section>
+    <section class="card" data-engine="C">
+      <h2>C. Tone.js の音色</h2>
+      <div class="tag">Tone.js・合成音</div>
+      <ul><li>Tone.js の部品（厚いのこぎり波・FMのベル・AMの和音・太鼓用の音源）</li><li>コーラス・リバーブも Tone.js</li></ul>
+      <button class="play">再生</button> <button class="stop">止める</button><span class="status"></span>
+    </section>
+    <section class="card" data-engine="D">
+      <h2>D. 録音した楽器の音</h2>
+      <div class="tag">Tone.js の Sampler・ピアノとドラムの録音</div>
+      <ul><li>旋律・和音・高い旋律はグランドピアノの録音、ドラムは生ドラムの録音、ベースは C と同じ合成音</li><li>聞き比べ専用（Tone.js が公開している見本の音を読み込む）。製品に使うなら素材の権利の確認が要る</li></ul>
+      <button class="play">再生</button> <button class="stop">止める</button><span class="status"></span>
+    </section>
+  </div>
+  <div class="beat" id="beat"></div>
+</main>
+<script>
+"use strict";
+// ---------- 共通の譜面（8分音符 × 32 = 4小節、100BPM） ----------
+const BPM = 100, STEP = 60 / BPM / 2, STEPS = 32, LOOPS = 2;
+const SCALE = [57, 60, 62, 64, 67, 69, 72, 74, 76, 79, 81]; // ゲームと同じ A マイナーペンタ
+const ROOTS = [45, 41, 36, 43];                              // A F C G（1小節ずつ）
+const CHORDS = [[57, 60, 64], [53, 57, 60], [55, 60, 64], [55, 59, 62]];
+// 旋律は「頭の高さ」の番号（null は休み）。ゲームで踊ったときに出そうな上下
+const LEAD = [5,6,7,null,6,5,null,4,  3,null,5,6,null,5,3,null,  4,5,7,8,7,null,5,null,  6,null,5,4,3,null,null,null];
+const HIGH = { 9: 7, 13: 8, 25: 9, 27: 8, 29: 7 };
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+
+function score() {
+  const on = {}; document.querySelectorAll("#layers input").forEach(c => on[c.dataset.layer] = c.checked);
+  const ev = [];
+  for (let s = 0; s < STEPS; s++) {
+    const bar = Math.floor(s / 8), b = s % 8;
+    if (on.drums) {
+      if (b === 0 || b === 4 || (b === 7 && bar % 2 === 1)) ev.push({ s, k: "kick" });
+      if (b === 2 || b === 6) ev.push({ s, k: "snare" });
+      ev.push({ s, k: "hat", accent: s % 2 === 0 });
+    }
+    if (on.bass && s % 2 === 0) ev.push({ s, k: "bass", m: ROOTS[bar] + (b % 4 === 2 ? 12 : 0) });
+    if (on.lead && LEAD[s] !== null) ev.push({ s, k: "lead", m: SCALE[LEAD[s]] });
+    if (on.pad && (b === 0 || b === 4)) ev.push({ s, k: "pad", ms: CHORDS[bar] });
+    if (on.high && HIGH[s] !== undefined) ev.push({ s, k: "high", m: SCALE[HIGH[s]] + 12 });
+  }
+  return ev;
+}
+
+// ---------- 音の土台（A・B は生の Web Audio、C・D は同じ AudioContext を Tone.js に渡す） ----------
+let ac = null, noiseBuf = null;
+function ensureCtx() {
+  if (ac) return;
+  ac = new AudioContext();
+  noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  if (window.Tone) Tone.setContext(ac);
+}
+function env(param, t, peak, a, dec) {
+  param.setValueAtTime(0.0001, t);
+  param.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a);
+  param.exponentialRampToValueAtTime(0.0001, t + a + dec);
+}
+function noiseSrc(t, dur) { const s = ac.createBufferSource(); s.buffer = noiseBuf; s.start(t); s.stop(t + dur); return s; }
+
+// ---------- A. 試作の音（試作の関数をそのまま） ----------
+function engineA(out) {
+  const master = ac.createGain(); master.gain.value = 0.7; master.connect(out);
+  const delay = ac.createDelay(); delay.delayTime.value = STEP * 1.5;
+  const fb = ac.createGain(); fb.gain.value = 0.28; const wet = ac.createGain(); wet.gain.value = 0.3;
+  delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(master);
+  const lead = (t, midi, voice) => {
+    const v = { normal: { parts: [["triangle", 1, 1], ["sine", 2, 0.35]], peak: 0.28, dec: 0.35, cut: 6000 },
+                bright: { parts: [["square", 1, 0.35], ["sawtooth", 2, 0.25], ["sine", 4, 0.2]], peak: 0.22, dec: 0.22, cut: 5000 },
+                pad: { parts: [["sine", 1, 1], ["triangle", 2, 0.2]], peak: 0.16, dec: 1.2, cut: 2500 } }[voice];
+    const f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = v.cut;
+    const g = ac.createGain(); env(g.gain, t, v.peak, voice === "pad" ? 0.08 : 0.005, v.dec);
+    for (const [type, mul, amp] of v.parts) {
+      const o = ac.createOscillator(), og = ac.createGain(); o.type = type; o.frequency.value = mtof(midi) * mul; og.gain.value = amp;
+      o.connect(og); og.connect(f); o.start(t); o.stop(t + v.dec + 0.2);
+    }
+    f.connect(g); g.connect(master); g.connect(delay);
+  };
+  return {
+    kick(t) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12); env(g.gain, t, 0.9, 0.003, 0.22); o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.3); },
+    snare(t) { const f = ac.createBiquadFilter(), g = ac.createGain(); f.type = "highpass"; f.frequency.value = 1200; env(g.gain, t, 0.35, 0.002, 0.16); noiseSrc(t, 0.25).connect(f); f.connect(g); g.connect(master);
+      const o = ac.createOscillator(), g2 = ac.createGain(); o.type = "triangle"; o.frequency.value = 190; env(g2.gain, t, 0.25, 0.002, 0.08); o.connect(g2); g2.connect(master); o.start(t); o.stop(t + 0.15); },
+    hat(t, accent) { const f = ac.createBiquadFilter(), g = ac.createGain(); f.type = "highpass"; f.frequency.value = 7000; env(g.gain, t, accent ? 0.11 : 0.06, 0.002, 0.04); noiseSrc(t, 0.1).connect(f); f.connect(g); g.connect(master); },
+    bass(t, m) { const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain(); o.type = "sawtooth"; o.frequency.value = mtof(m); f.type = "lowpass"; f.frequency.value = 500; env(g.gain, t, 0.22, 0.005, STEP * 1.6); o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + STEP * 2); },
+    lead(t, m) { lead(t, m, "normal"); },
+    pad(t, ms) { for (const m of ms) lead(t, m - 12, "pad"); },
+    high(t, m) { lead(t, m, "bright"); },
+    stop() { master.disconnect(); },
+  };
+}
+
+// ---------- B. 合成音を磨いたもの（ライブラリなし） ----------
+function makeImpulse(sec, decay) {
+  const len = Math.floor(ac.sampleRate * sec), buf = ac.createBuffer(2, len, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay); }
+  return buf;
+}
+function engineB(out) {
+  const comp = ac.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 3; comp.connect(out);
+  const master = ac.createGain(); master.gain.value = 0.8; master.connect(comp);
+  const verb = ac.createConvolver(); verb.buffer = makeImpulse(2.4, 3); const vGain = ac.createGain(); vGain.gain.value = 0.35; verb.connect(vGain); vGain.connect(master);
+  const delay = ac.createDelay(); delay.delayTime.value = STEP * 3; const fb = ac.createGain(); fb.gain.value = 0.25; const dWet = ac.createGain(); dWet.gain.value = 0.18;
+  const dF = ac.createBiquadFilter(); dF.type = "lowpass"; dF.frequency.value = 2500;
+  delay.connect(dF); dF.connect(fb); fb.connect(delay); dF.connect(dWet); dWet.connect(master);
+  const send = (node, rev, dly = 0) => { node.connect(master); if (rev) { const s = ac.createGain(); s.gain.value = rev; node.connect(s); s.connect(verb); } if (dly) { const s = ac.createGain(); s.gain.value = dly; node.connect(s); s.connect(delay); } };
+  return {
+    kick(t) {
+      const o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.1);
+      env(g.gain, t, 1.0, 0.002, 0.35); o.connect(g); send(g, 0.05); o.start(t); o.stop(t + 0.45);
+      const f = ac.createBiquadFilter(), cg = ac.createGain(); f.type = "highpass"; f.frequency.value = 3000; env(cg.gain, t, 0.3, 0.001, 0.015); noiseSrc(t, 0.03).connect(f); f.connect(cg); cg.connect(master);
+    },
+    snare(t) {
+      const f = ac.createBiquadFilter(), g = ac.createGain(); f.type = "bandpass"; f.frequency.value = 1800; f.Q.value = 0.7; env(g.gain, t, 0.5, 0.001, 0.2); noiseSrc(t, 0.3).connect(f); f.connect(g); send(g, 0.25);
+      const o = ac.createOscillator(), g2 = ac.createGain(); o.type = "triangle"; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.08); env(g2.gain, t, 0.35, 0.001, 0.1); o.connect(g2); send(g2, 0.15); o.start(t); o.stop(t + 0.2);
+    },
+    hat(t, accent) { const f = ac.createBiquadFilter(), g = ac.createGain(); f.type = "highpass"; f.frequency.value = 8000; env(g.gain, t, accent ? 0.12 : 0.07, 0.001, accent ? 0.06 : 0.035); noiseSrc(t, 0.1).connect(f); f.connect(g); send(g, 0.08); },
+    bass(t, m) {
+      const sub = ac.createOscillator(), sq = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
+      sub.type = "sine"; sub.frequency.value = mtof(m); sq.type = "square"; sq.frequency.value = mtof(m);
+      const sqg = ac.createGain(); sqg.gain.value = 0.3; f.type = "lowpass"; f.Q.value = 4;
+      f.frequency.setValueAtTime(1400, t); f.frequency.exponentialRampToValueAtTime(260, t + 0.18);
+      env(g.gain, t, 0.38, 0.004, STEP * 1.7);
+      sub.connect(g); sq.connect(sqg); sqg.connect(f); f.connect(g); send(g, 0);
+      for (const o of [sub, sq]) { o.start(t); o.stop(t + STEP * 2); }
+    },
+    lead(t, m) { // つま弾く音: 少しずらした2本ののこぎり波 + フィルターが閉じていく
+      const f = ac.createBiquadFilter(), g = ac.createGain(); f.type = "lowpass"; f.Q.value = 3;
+      f.frequency.setValueAtTime(4200, t); f.frequency.exponentialRampToValueAtTime(700, t + 0.3);
+      env(g.gain, t, 0.2, 0.003, 0.45);
+      for (const det of [-8, 8]) { const o = ac.createOscillator(); o.type = "sawtooth"; o.frequency.value = mtof(m); o.detune.value = det; o.connect(f); o.start(t); o.stop(t + 0.6); }
+      f.connect(g); send(g, 0.3, 0.6);
+    },
+    pad(t, ms) { // ふわっと広がる和音: 3本ずつ少しずらし、ゆっくり立ち上がって消える
+      const f = ac.createBiquadFilter(), g = ac.createGain(); f.type = "lowpass"; f.frequency.value = 1500;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.07, t + 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + STEP * 4.5);
+      for (const m of ms) for (const det of [-12, 0, 12]) { const o = ac.createOscillator(); o.type = "sawtooth"; o.frequency.value = mtof(m - 12); o.detune.value = det; o.connect(f); o.start(t); o.stop(t + STEP * 4.6); }
+      f.connect(g); send(g, 0.6);
+    },
+    high(t, m) { // ベル: FM 合成（周波数の3.5倍で揺らす）
+      const car = ac.createOscillator(), mod = ac.createOscillator(), mg = ac.createGain(), g = ac.createGain();
+      car.frequency.value = mtof(m); mod.frequency.value = mtof(m) * 3.5;
+      mg.gain.setValueAtTime(mtof(m) * 2.5, t); mg.gain.exponentialRampToValueAtTime(1, t + 0.8);
+      mod.connect(mg); mg.connect(car.frequency); env(g.gain, t, 0.13, 0.002, 1.1);
+      car.connect(g); send(g, 0.45, 0.4);
+      for (const o of [car, mod]) { o.start(t); o.stop(t + 1.3); }
+    },
+    stop() { master.disconnect(); },
+  };
+}
+
+// ---------- C. Tone.js の音色 ----------
+function toneCommon(out) {
+  const master = new Tone.Gain(0.8); master.connect(out);
+  const comp = new Tone.Compressor(-18, 3).connect(master);
+  const verb = new Tone.Reverb({ decay: 2.4, wet: 0.28 }).connect(comp);
+  const chorus = new Tone.Chorus(3, 2.5, 0.4).connect(verb).start();
+  const kick = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 6, envelope: { attack: 0.001, decay: 0.35, sustain: 0 } }).connect(comp);
+  const snare = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.18, sustain: 0 } }).connect(new Tone.Filter(1800, "bandpass").connect(verb));
+  const hat = new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.04, sustain: 0 } }).connect(new Tone.Filter(8000, "highpass").connect(comp));
+  const bass = new Tone.MonoSynth({ oscillator: { type: "square" }, filter: { Q: 3, type: "lowpass" },
+    envelope: { attack: 0.004, decay: 0.3, sustain: 0.4, release: 0.2 }, filterEnvelope: { attack: 0.002, decay: 0.2, sustain: 0.2, baseFrequency: 120, octaves: 3 } }).connect(comp);
+  bass.volume.value = -6; snare.volume.value = -8; hat.volume.value = -14; kick.volume.value = -2;
+  const nodes = [master, comp, verb, chorus, kick, snare, hat, bass];
+  return { master, comp, verb, chorus, kick, snare, hat, bass, nodes };
+}
+function engineC(out) {
+  const c = toneCommon(out);
+  const lead = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "fatsawtooth", count: 3, spread: 18 },
+    envelope: { attack: 0.004, decay: 0.25, sustain: 0.15, release: 0.4 } }).connect(new Tone.Filter(2600, "lowpass").connect(c.chorus));
+  lead.volume.value = -14;
+  const pad = new Tone.PolySynth(Tone.AMSynth, { harmonicity: 2, envelope: { attack: 0.25, decay: 0.5, sustain: 0.6, release: 1.2 } }).connect(c.verb);
+  pad.volume.value = -20;
+  const high = new Tone.FMSynth({ harmonicity: 3.5, modulationIndex: 12, envelope: { attack: 0.002, decay: 1.0, sustain: 0, release: 0.5 },
+    modulationEnvelope: { attack: 0.002, decay: 0.6, sustain: 0 } }).connect(c.verb);
+  high.volume.value = -16;
+  c.nodes.push(lead, pad, high);
+  return {
+    ready: Promise.all([Tone.loaded(), c.verb.ready]),
+    kick: t => c.kick.triggerAttackRelease("C1", 0.3, t),
+    snare: t => c.snare.triggerAttackRelease(0.18, t),
+    hat: (t, a) => c.hat.triggerAttackRelease(0.04, t, a ? 1 : 0.6),
+    bass: (t, m) => c.bass.triggerAttackRelease(mtof(m), STEP * 1.6, t),
+    lead: (t, m) => lead.triggerAttackRelease(mtof(m), STEP * 0.9, t),
+    pad: (t, ms) => pad.triggerAttackRelease(ms.map(m => mtof(m - 12)), STEP * 3.5, t),
+    high: (t, m) => high.triggerAttackRelease(mtof(m), 0.2, t),
+    stop() { c.nodes.forEach(n => n.dispose()); },
+  };
+}
+
+// ---------- D. 録音した楽器の音 ----------
+let samplersReady = null, piano = null, drumKit = null;
+function loadSamples() {
+  if (samplersReady) return samplersReady;
+  const urls = {};
+  for (const n of ["A1","C2","D#2","F#2","A2","C3","D#3","F#3","A3","C4","D#4","F#4","A4","C5","D#5","F#5","A5","C6","D#6","F#6","A6"]) urls[n] = n.replace("#", "s") + ".mp3";
+  piano = new Tone.Sampler({ urls, baseUrl: "https://tonejs.github.io/audio/salamander/", release: 1 });
+  drumKit = new Tone.Players({ kick: "kick.mp3", snare: "snare.mp3", hat: "hihat.mp3" }, { baseUrl: "https://tonejs.github.io/audio/drum-samples/acoustic-kit/" });
+  samplersReady = Tone.loaded();
+  return samplersReady;
+}
+function engineD(out) {
+  const loading = loadSamples();
+  const c = toneCommon(out);
+  const pianoOut = new Tone.Gain(1).connect(c.verb); piano.disconnect(); piano.connect(pianoOut); piano.volume.value = -4;
+  const drumOut = new Tone.Gain(1).connect(c.comp); drumKit.disconnect(); drumKit.connect(drumOut);
+  c.nodes.push(pianoOut, drumOut);
+  const hit = (name, t, vol) => { const p = drumKit.player(name); p.volume.value = vol; p.start(t); };
+  return {
+    ready: Promise.all([loading, c.verb.ready]),
+    kick: t => hit("kick", t, 0),
+    snare: t => hit("snare", t, -3),
+    hat: (t, a) => hit("hat", t, a ? -8 : -14),
+    bass: (t, m) => c.bass.triggerAttackRelease(mtof(m), STEP * 1.6, t),
+    lead: (t, m) => piano.triggerAttackRelease(mtof(m), STEP * 1.2, t, 0.8),
+    pad: (t, ms) => piano.triggerAttackRelease(ms.map(m => mtof(m - 12)), STEP * 3.5, t, 0.45),
+    high: (t, m) => piano.triggerAttackRelease(mtof(m), 0.5, t, 0.6),
+    stop() { piano.disconnect(); drumKit.disconnect(); c.nodes.forEach(n => n.dispose()); },
+  };
+}
+
+// ---------- 再生 ----------
+const ENGINES = { A: engineA, B: engineB, C: engineC, D: engineD };
+let current = null; // { name, eng, out, timer, start }
+window.__debug = { played: [], errors: [] };
+function stopAll() {
+  if (!current) return;
+  clearInterval(current.timer);
+  try { current.out.gain.setTargetAtTime(0, ac.currentTime, 0.05); } catch (e) {}
+  const c = current; setTimeout(() => { try { c.eng.stop(); c.out.disconnect(); } catch (e) {} }, 400);
+  document.querySelector(`.card[data-engine="${c.name}"]`).classList.remove("playing");
+  current = null;
+}
+async function play(name) {
+  ensureCtx(); await ac.resume();
+  stopAll();
+  const card = document.querySelector(`.card[data-engine="${name}"]`), status = card.querySelector(".status");
+  if ((name === "C" || name === "D") && !window.Tone) { status.textContent = "Tone.js を読み込めませんでした（ネットにつながっているか確認）"; return; }
+  const out = ac.createGain(); out.connect(ac.destination);
+  const eng = ENGINES[name](out);
+  if (eng.ready) {
+    status.textContent = name === "D" ? "録音した音を読み込み中…（初回は10秒ほどかかります）" : "音を読み込み中…";
+    try { await eng.ready; } catch (e) { status.textContent = "読み込みに失敗: " + e.message; window.__debug.errors.push(String(e)); return; }
+  }
+  status.textContent = "";
+  const ev = score(), start = ac.currentTime + 0.15;
+  // Tone.js の単音の楽器は、時刻の早い順に予約しないと失敗するので、全周ぶんを時刻順に並べてから予約する
+  const all = [];
+  for (let l = 0; l < LOOPS; l++) ev.forEach(e => all.push({ e, t: start + (l * STEPS + e.s) * STEP }));
+  all.sort((x, y) => x.t - y.t);
+  all.forEach(({ e, t }) => {
+    try { e.ms ? eng[e.k](t, e.ms) : e.k === "hat" ? eng.hat(t, e.accent) : eng[e.k](t, e.m); }
+    catch (err) { window.__debug.errors.push(name + ":" + e.k + ":" + err.message); }
+  });
+  window.__debug.played.push(name);
+  card.classList.add("playing");
+  const total = LOOPS * STEPS * STEP;
+  current = { name, eng, out, start, timer: setInterval(() => {
+    const t = ac.currentTime - start;
+    const s = Math.floor(t / STEP) % STEPS;
+    beatCells.forEach((c, i) => c.classList.toggle("on", i === s && t >= 0));
+    if (t > total + 1.5) stopAll();
+  }, 30) };
+}
+const beat = document.getElementById("beat"), beatCells = [];
+for (let i = 0; i < STEPS; i++) { const c = document.createElement("span"); if (i && i % 8 === 0) c.className = "bar"; beat.appendChild(c); beatCells.push(c); }
+document.querySelectorAll(".card").forEach(card => {
+  card.querySelector(".play").addEventListener("click", () => play(card.dataset.engine));
+  card.querySelector(".stop").addEventListener("click", stopAll);
+});
+</script>
+</body>
+</html>
