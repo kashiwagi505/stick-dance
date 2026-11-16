@@ -31,10 +31,9 @@ export function readPalette(): Palette {
 /** 床の高さ（舞台の上からの px） */
 export const floorY = V.stageHeight * V.floorRatio;
 
-/** 舞台を消して床を描く */
+/** 舞台を消して床を描く（地は Canvas の後ろの背景の絵が見える。play.css） */
 export function clearStage(ctx: CanvasRenderingContext2D, p: Palette): void {
-  ctx.fillStyle = p.stage;
-  ctx.fillRect(0, 0, V.stageWidth, V.stageHeight);
+  ctx.clearRect(0, 0, V.stageWidth, V.stageHeight);
   ctx.strokeStyle = p.floor;
   ctx.lineWidth = 2;
   ctx.beginPath();

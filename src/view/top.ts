@@ -96,6 +96,7 @@ export function openCredit(opener: HTMLElement): void {
       ),
     ),
     h('p', { class: 'credit__note' }, TEXT.credit.note),
+    h('p', { class: 'credit__note' }, TEXT.credit.imageNote),
     h('div', { class: 'credit__close' }, close),
   );
   document.body.append(dialog);

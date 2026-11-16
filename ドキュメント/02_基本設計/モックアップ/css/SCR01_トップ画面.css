@@ -12,6 +12,8 @@
   min-height: 100vh;
   padding: var(--space-7) 0 var(--space-8);
   text-align: center;
+  /* 背景の絵（画像生成。素材/画像の記録）。暗い絵の上に照明・棒人間・文字を重ねる */
+  background: var(--color-stage) url("../img/bg-top.jpg") center / cover no-repeat;
 }
 
 /* ---- タイトル（Stick Title。ネオン管として一度だけ点く） ---- */

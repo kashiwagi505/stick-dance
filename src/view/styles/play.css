@@ -22,7 +22,8 @@
   display: block;
   width: var(--frame-width);
   height: var(--frame-height);
-  background: var(--color-stage);
+  /* 舞台の背景の絵（画像生成。素材/画像の記録）。Canvas は透明に消して、この上に描く */
+  background: var(--color-stage) url("/images/bg-stage.jpg") center / cover no-repeat;
 }
 
 /*
