@@ -8,8 +8,6 @@ export interface AudioSettings {
   drumsDb: number;
   /** 楽器ごとの音量（デシベル。1人目〜5人目の楽器の順） */
   instrumentDb: readonly [number, number, number, number, number];
-  /** 踊っている間の分身の音量（デシベル。今の自分を聞きやすくする） */
-  ghostDb: number;
   /** 1つの音の長さ（秒） */
   noteSeconds: number;
   /** 描画のたびに、今からこの秒数先までの拍を予約する（鑑賞・伴奏） */
@@ -20,7 +18,6 @@ export const DEFAULT_AUDIO: AudioSettings = {
   masterDb: -4,
   drumsDb: -8,
   instrumentDb: [-12, -6, -16, -14, -8],
-  ghostDb: -5,
   noteSeconds: 0.22,
   scheduleAheadSeconds: 0.12,
 };

@@ -49,7 +49,7 @@ export class Score {
     }
   }
 
-  /** 拍 step の点いているマスを一瞬光らせる（分身・鑑賞） */
+  /** 拍 step の点いているマスを一瞬光らせる（鑑賞。踊っている間は分身の音を鳴らさないので使わない。判断ログ D26） */
   ringColumn(step: number, rows: readonly number[]): void {
     for (const r of rows) {
       const c = this.rows[r]?.[step];
