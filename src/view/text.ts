@@ -66,6 +66,7 @@ export const TEXT = {
     title: 'クレジット',
     intro: 'このゲームは、次の素材とライブラリを使っています。ありがとうございます。',
     note: '旋律・和音・高い旋律の音と手拍子は、このゲームの中で作った音です。',
+    imageNote: '背景の絵は、OpenAI の画像生成（Codex）で作りました。',
     close: '閉じる',
   },
 } as const;
