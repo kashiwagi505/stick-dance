@@ -79,12 +79,23 @@
     const lx = W / 2 + 180;
     ctx.font = `16px ${getComputedStyle(document.body).fontFamily}`;
     ctx.textAlign = 'left';
+    // 打楽器は同じ種類の段をまとめ、真ん中の段に1列で出す（設計書 3.1 No.4）
+    const PERC = [['手拍子', 0, 2], ['タンバリン', 3, 5], ['軽い手拍子', 6, 8], ['トライアングル', 9, 10]];
     for (let i = 0; i < 11; i++) {
       const y = restY + 85 - (i / 10) * 130;
       const hot = ringing && i === idx;
       const cur = i === idx;
       ctx.fillStyle = hot ? color : cur ? '#f4f0ff' : '#2e2a4a';
       ctx.fillRect(lx, y - 2, hot ? 36 : 24, 4);
+      if (st.me === 4) {
+        const g = PERC.find(([, a, b]) => i === Math.floor((a + b) / 2));
+        if (g) {
+          const inside = idx >= g[1] && idx <= g[2];
+          ctx.fillStyle = inside && ringing ? color : inside ? '#f4f0ff' : '#9d97bb';
+          ctx.fillText(g[0], lx + 44, y + 6);
+        }
+        continue;
+      }
       ctx.fillStyle = hot ? color : cur ? '#f4f0ff' : '#9d97bb';
       ctx.fillText(S.SCALE_NAMES[i], lx + (i % 2 ? 72 : 44), y + 6); // 段の間が狭いので2列に互い違い
     }

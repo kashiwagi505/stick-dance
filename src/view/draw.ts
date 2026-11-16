@@ -94,24 +94,56 @@ export function drawPulls(ctx: CanvasRenderingContext2D, pose: Pose, x: number, 
   ctx.restore();
 }
 
+/** はしごの名前1つ。from〜to の段をまとめて指し、at の段の高さに出す */
+export interface LadderLabel {
+  text: string;
+  from: number;
+  to: number;
+  at: number;
+  /** 0 = 左の列、1 = 右の列 */
+  column: 0 | 1;
+}
+
+/** 音の名前のはしご: 1段に1つ。段の間が文字より狭いので、2列に互い違いに置く */
+export function scaleLabels(names: readonly string[]): LadderLabel[] {
+  return names.map((text, i) => ({ text, from: i, to: i, at: i, column: i % 2 === 1 ? 1 : 0 }));
+}
+
+/**
+ * 打楽器のはしご: 同じ種類の続く段を1つにまとめ、まとまりの真ん中の段に1列で出す。
+ * 種類の名前は長いので、段ごとに出すと重なって読めない（SCR02 3.1 No.4）
+ */
+export function groupLabels(kinds: readonly string[]): LadderLabel[] {
+  const out: LadderLabel[] = [];
+  let from = 0;
+  for (let i = 1; i <= kinds.length; i++) {
+    if (i === kinds.length || kinds[i] !== kinds[from]) {
+      out.push({ text: kinds[from] ?? '', from, to: i - 1, at: Math.floor((from + i - 1) / 2), column: 0 });
+      from = i;
+    }
+  }
+  return out;
+}
+
 /** 音階のはしご（SCR02 3.1 No.4）。current は今の頭の段、ringing は鳴っている段（無ければ -1） */
-export function drawLadder(ctx: CanvasRenderingContext2D, x: number, names: readonly string[], current: number, ringing: number, color: string, p: Palette): void {
+export function drawLadder(ctx: CanvasRenderingContext2D, x: number, steps: number, labels: readonly LadderLabel[], current: number, ringing: number, color: string, p: Palette): void {
   const m = DEFAULT_MUSIC;
-  const top = names.length - 1;
+  const top = steps - 1;
   const lx = x + V.ladderOffset;
+  const yOf = (i: number): number => floorY + DEFAULT_DANCE.rest.head.y + m.headDown - (i / top) * (m.headUp + m.headDown);
   ctx.save();
   ctx.font = `16px ${p.font}`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   for (let i = 0; i <= top; i++) {
-    const y = floorY + DEFAULT_DANCE.rest.head.y + m.headDown - (i / top) * (m.headUp + m.headDown);
     const hot = i === ringing;
-    const cur = i === current;
-    ctx.fillStyle = hot ? color : cur ? p.light : p.floor;
-    ctx.fillRect(lx, y - 2, hot ? 36 : 24, 4);
-    ctx.fillStyle = hot ? color : cur ? p.light : p.haze;
-    // 段の間が文字より狭いので、名前は2列に互い違いに置く
-    ctx.fillText(names[i] ?? '', lx + (i % 2 === 1 ? 72 : 44), y);
+    ctx.fillStyle = hot ? color : i === current ? p.light : p.floor;
+    ctx.fillRect(lx, yOf(i) - 2, hot ? 36 : 24, 4);
+  }
+  for (const l of labels) {
+    const within = (i: number): boolean => i >= l.from && i <= l.to;
+    ctx.fillStyle = within(ringing) ? color : within(current) ? p.light : p.haze;
+    ctx.fillText(l.text, lx + (l.column === 1 ? 72 : 44), yOf(l.at));
   }
   ctx.restore();
 }
