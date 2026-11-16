@@ -110,7 +110,7 @@ export function mountViewing(root: HTMLElement, mode: ViewingMode): () => void {
       for (let k = 0; k < joined; k++) {
         const nt = notes[k]?.[inLoop];
         if (!nt) continue;
-        engine.playNote(nt, time, 'view');
+        engine.playNote(nt, time);
         pendingFlash.push({ time, person: k, step: inLoop });
       }
       nextStep++;
