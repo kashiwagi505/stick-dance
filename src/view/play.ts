@@ -8,7 +8,7 @@ import { DEFAULT_DANCE, TICKS_PER_SECOND } from '../core/settings';
 import { accompaniment, degreeOf, layerNotes, noteFor, type Note } from '../music/notes';
 import { DEFAULT_MUSIC, INSTRUMENT_NAMES, PERC_NAMES, SCALE_NAMES, percKindOf } from '../music/settings';
 import { h, instrumentColor, key } from './dom';
-import { clearStage, drawFigure, drawLabel, drawLadder, drawPulls, drawTrail, readPalette } from './draw';
+import { clearStage, drawFigure, drawLabel, drawLadder, drawPulls, drawTrail, groupLabels, readPalette, scaleLabels } from './draw';
 import { Score } from './score';
 import { VIEW_SETTINGS as V } from './settings';
 import { TEXT } from './text';
@@ -43,6 +43,9 @@ export function mountPlay(root: HTMLElement, engine: SoundEngine, onFinish: (rec
   const stepSec = stepSeconds(L);
   const t0 = SoundEngine.now() + V.startLeadSeconds;
   const palette = readPalette();
+  // はしごの名前（音の名前は段ごと、打楽器は同じ種類の段をまとめる。SCR02 3.1 No.4）
+  const scaleNameLabels = scaleLabels(SCALE_NAMES);
+  const percLabels = groupLabels(SCALE_NAMES.map((_, i) => PERC_NAMES[percKindOf(i)]));
 
   // ---- 画面の組み立て（モックアップ SCR02_踊る画面.html と同じ形） ----
   const instButtons = INSTRUMENT_NAMES.map((name, i) => {
@@ -234,8 +237,8 @@ export function mountPlay(root: HTMLElement, engine: SoundEngine, onFinish: (rec
     const glow = now - liveFlash < V.flashSeconds;
     drawFigure(ctx, pose, cx, 1, color, glow, palette);
     drawPulls(ctx, pose, cx, session.heldKeys(), palette);
-    const names = session.instrument === 4 ? SCALE_NAMES.map((_, i) => PERC_NAMES[percKindOf(i)]) : SCALE_NAMES;
-    drawLadder(ctx, cx, names, degreeOf(pose[0]?.y ?? 0, M, D), glow ? liveRinging : -1, color, palette);
+    const labels = session.instrument === 4 ? percLabels : scaleNameLabels;
+    drawLadder(ctx, cx, SCALE_NAMES.length, labels, degreeOf(pose[0]?.y ?? 0, M, D), glow ? liveRinging : -1, color, palette);
     const sinceStart = now - t0;
     score.setPlayhead(sinceStart >= 0 ? Math.floor(sinceStart / stepSec) % per : null);
   }
