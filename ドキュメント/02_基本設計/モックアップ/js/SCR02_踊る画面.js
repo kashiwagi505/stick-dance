@@ -64,8 +64,8 @@
 
     st.ghosts.forEach((g, k) => {
       const x = W * SLOTS[k];
-      const glow = S.notesFor(g).has(step) && (t % S.BEAT) < S.BEAT / 2;
-      S.figure(ctx, S.pose(g, t, true), x, baseY, 0.55, S.COLORS[g], glow);
+      // 踊っている間は分身の音を鳴らさないので、光らせない（設計書 3.1 No.6、判断ログ D26）
+      S.figure(ctx, S.pose(g, t, true), x, baseY, 0.55, S.COLORS[g], false);
       S.label(ctx, `${k + 1}人目・${S.NAMES[g]}`, x, baseY + 32, S.COLORS[g]);
     });
 
@@ -103,7 +103,8 @@
     playhead.style.left = `${S.cellX(step) + 9}px`;
     scoreEl.querySelectorAll('.score__cell.is-ringing').forEach((c) => c.classList.remove('is-ringing'));
     if (!st.paused) {
-      scoreEl.querySelectorAll(`.score__row .score__cell:nth-child(${step + 1}).is-on`).forEach((c) => c.classList.add('is-ringing'));
+      // 光るのは今の自分の段（いちばん下）だけ
+      scoreEl.querySelectorAll(`.score__row:last-of-type .score__cell:nth-child(${step + 1}).is-on`).forEach((c) => c.classList.add('is-ringing'));
     }
     requestAnimationFrame(draw);
   }

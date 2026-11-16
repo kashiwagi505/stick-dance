@@ -10,9 +10,6 @@ import { DEFAULT_AUDIO, type AudioSettings } from './settings';
 /** 読み込みの結果（失敗は1つでも読めなかったとき。内部の詳細は返さない） */
 export type LoadResult = { ok: true } | { ok: false };
 
-/** 鳴らす人の役（音量が変わる） */
-export type Role = 'live' | 'ghost' | 'view';
-
 type BufferMap = Map<string, Tone.ToneAudioBuffer>;
 type Buffers = { drums: BufferMap; perc: BufferMap; bass: BufferMap };
 
@@ -116,10 +113,10 @@ export class SoundEngine {
   }
 
   /** 音1つを、音の時計の time に鳴らす。過ぎた時刻なら鳴らさない（設計判断 No.6） */
-  playNote(note: Note, time: number, role: Role): void {
+  playNote(note: Note, time: number): void {
     if (time < SoundEngine.now()) return;
     const seat = this.seat(note.person);
-    const db = (this.settings.instrumentDb[note.instrument] ?? 0) + (role === 'ghost' ? this.settings.ghostDb : 0);
+    const db = this.settings.instrumentDb[note.instrument] ?? 0;
     seat.gain.gain.setValueAtTime(Tone.dbToGain(db), time);
     seat.panner.pan.setValueAtTime(note.pan, time);
     this.voice(seat, note.instrument).play(note, time, this.settings.noteSeconds);

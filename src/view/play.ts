@@ -33,7 +33,6 @@ const PULL_CODES: Readonly<Record<string, PullKey>> = {
 /** 拍の時刻に画面へ反映する出来事 */
 type Visual =
   | { time: number; kind: 'live'; step: number; degree: number; x: number; y: number }
-  | { time: number; kind: 'ghost'; person: number; step: number }
   | { time: number; kind: 'loop'; loop: number };
 
 /** 踊る画面を出す。踊りを終えたら onFinish に記録と鑑賞の始まり（音の時計の時刻）を渡す。片付ける関数を返す */
@@ -90,13 +89,13 @@ export function mountPlay(root: HTMLElement, engine: SoundEngine, onFinish: (rec
   const ctx = canvas.getContext('2d');
 
   // ---- 状態 ----
+  /** 分身ごとの1周の音の並び（譜面の帯に出すためだけに使う。踊っている間は鳴らさない） */
   let ghostNotes: (Note | null)[][] = [];
   let liveOn = new Set<number>();
   const visuals: Visual[] = [];
   const trail: { x: number; y: number; time: number }[] = [];
   let liveFlash = -Infinity;
   let liveRinging = -1;
-  const ghostFlash: number[] = [];
   let pauseReason: 'space' | 'hidden' | null = null;
   let raf = 0;
   let ended = false;
@@ -184,15 +183,10 @@ export function mountPlay(root: HTMLElement, engine: SoundEngine, onFinish: (rec
       for (const hit of accompaniment(inLoop, M)) engine.playAccompaniment(hit, time);
       const note = noteFor(s.sample, s.instrument, session.layers.length, M, D);
       if (note) {
-        engine.playNote(note, time, 'live');
+        engine.playNote(note, time);
         visuals.push({ time, kind: 'live', step: inLoop, degree: note.degree, x: s.sample.head.x, y: s.sample.head.y });
       }
-      ghostNotes.forEach((notes, k) => {
-        const n = notes[inLoop];
-        if (!n) return;
-        engine.playNote(n, time, 'ghost');
-        visuals.push({ time, kind: 'ghost', person: k, step: inLoop });
-      });
+      // 分身の音は鳴らさない（全員の音は鑑賞で初めてまとめて鳴らす。判断ログ D26）
     }
   }
 
@@ -205,15 +199,12 @@ export function mountPlay(root: HTMLElement, engine: SoundEngine, onFinish: (rec
         liveOn = new Set();
         score.clearRow(session.layers.length);
         if (v.loop >= 1) hint.hidden = true;
-      } else if (v.kind === 'live') {
+      } else {
         liveOn.add(v.step);
         score.light(session.layers.length, v.step, true);
         liveFlash = v.time;
         liveRinging = v.degree;
         trail.push({ x: v.x, y: v.y, time: v.time });
-      } else {
-        ghostFlash[v.person] = v.time;
-        score.ringColumn(v.step, [v.person]);
       }
     }
     while (trail.length > 0 && now - (trail[0]?.time ?? now) > V.trailSeconds) trail.shift();
@@ -227,7 +218,7 @@ export function mountPlay(root: HTMLElement, engine: SoundEngine, onFinish: (rec
       const pose = layerPoseAt(layer, L, tick);
       const x = V.stageWidth * (V.ghostSlots[k] ?? 0.5);
       const color = instrumentColor(layer.instrument);
-      if (pose) drawFigure(ctx, pose, x, V.ghostScale, color, now - (ghostFlash[k] ?? -Infinity) < V.flashSeconds, palette);
+      if (pose) drawFigure(ctx, pose, x, V.ghostScale, color, false, palette); // 分身は鳴らさないので光らせない（D26）
       drawLabel(ctx, T.ghostLabel(k + 1, INSTRUMENT_NAMES[layer.instrument]), x, color, palette);
     });
     const cx = V.stageWidth / 2;
