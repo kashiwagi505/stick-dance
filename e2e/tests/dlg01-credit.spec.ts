@@ -19,6 +19,7 @@ test.describe('DLG01 クレジットの窓', () => {
     await expect(dialog.getByText('Yotam Mann ほか ／ MIT License')).toBeVisible();
     await expect(dialog.getByText('このゲームは、次の素材とライブラリを使っています。ありがとうございます。')).toBeVisible();
     await expect(dialog.getByText('旋律・和音・高い旋律の音と手拍子は、このゲームの中で作った音です。')).toBeVisible();
+    await expect(dialog.getByText('背景の絵は、OpenAI の画像生成（Codex）で作りました。')).toBeVisible();
     await saveEvidence(page, SCREEN, 'DLG01-01', 1);
   });
 
